@@ -1,5 +1,5 @@
-// Use proxy in development, direct URL in production
-const API_BASE_URL = import.meta.env.DEV ? '' : 'https://zanalyzer.fly.dev'
+// Use proxy in development and production
+const API_BASE_URL = ''
 
 
 
