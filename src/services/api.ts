@@ -1,9 +1,7 @@
 // Use proxy in development, direct URL in production
 const API_BASE_URL = import.meta.env.DEV ? '' : 'https://zanalyzer.fly.dev'
 
-interface AnalysisRequest {
-  videoUrl: string
-}
+
 
 interface AnalysisResponse {
   message: string
