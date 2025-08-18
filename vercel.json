@@ -4,15 +4,15 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "/api/api/:path*"
+      "source": "/api/(.*)",
+      "destination": "/api/proxy-api/$1"
     },
     {
-      "source": "/auth/:path*", 
-      "destination": "/api/auth/:path*"
+      "source": "/auth/(.*)", 
+      "destination": "/api/proxy-auth/$1"
     },
     {
-      "source": "/((?!api|auth).*)",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ],
