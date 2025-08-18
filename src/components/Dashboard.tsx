@@ -52,11 +52,8 @@ const Dashboard: React.FC = () => {
   const registerUserWithBackend = async (token: string) => {
     try {
       await apiService.signUpUser(token)
-      console.log('✅ User successfully registered with backend')
     } catch (error) {
-      // User registration failed - this is non-critical for app functionality
-      // The user can still use the app for analysis requests
-      console.warn('⚠️  Backend user registration failed (non-critical):', error)
+      // Silently handle registration - non-critical for app functionality
     }
   }
 
@@ -68,8 +65,8 @@ const Dashboard: React.FC = () => {
       const data = await apiService.getDashboardData()
       setDashboardData(data)
     } catch (error) {
-      console.error('Error fetching dashboard data:', error)
-      setDashboardError(error instanceof Error ? error.message : 'Failed to load dashboard data')
+      // Silently handle dashboard errors - will fall back to empty state
+      setDashboardError('Unable to load usage statistics')
     } finally {
       setDashboardLoading(false)
     }
@@ -101,14 +98,7 @@ const Dashboard: React.FC = () => {
       }
       setVideoUrl('')
     } catch (error) {
-      console.error('Error submitting analysis request:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Failed to submit analysis request'
-      
-      if (errorMessage.includes('422') || errorMessage.includes('validation')) {
-        setStatusMessage('⚠️ API authentication issue. The backend may be expecting a different token format. Please try again or contact support.')
-      } else {
-        setStatusMessage(`Error: ${errorMessage}`)
-      }
+      setStatusMessage('Unable to submit analysis request. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -149,8 +139,7 @@ const Dashboard: React.FC = () => {
           setIsPolling(false)
         }
       } catch (error) {
-        console.error('Error polling analysis status:', error)
-        setStatusMessage(`Polling error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        setStatusMessage('Error checking analysis status. Please refresh to see results.')
         setIsPolling(false)
       }
     }
@@ -162,7 +151,7 @@ const Dashboard: React.FC = () => {
     try {
       await signOut()
     } catch (error) {
-      console.error('Error signing out:', error)
+      // Silently handle sign out errors
     }
   }
 
@@ -181,20 +170,6 @@ const Dashboard: React.FC = () => {
         </header>
 
         <main>
-          {/* API Status Notice */}
-          <section style={{ 
-            border: '2px solid #28a745', 
-            padding: '15px', 
-            marginBottom: '20px',
-            backgroundColor: '#d4edda'
-          }}>
-            <h3 style={{ margin: '0 0 10px 0', color: '#155724' }}>✅ API Status Update</h3>
-            <p style={{ margin: '0', fontSize: '14px', color: '#155724' }}>
-              <strong>Dashboard API:</strong> Now working! Usage statistics are loaded from the backend. 
-              User registration and video analysis may still have authentication issues that need backend team attention.
-            </p>
-          </section>
-
           {/* Analysis Form */}
           <section style={{ border: '1px solid black', padding: '20px', marginBottom: '30px' }}>
             <h2>Analyze TikTok Video</h2>
@@ -265,38 +240,12 @@ const Dashboard: React.FC = () => {
           {/* Usage Stats */}
           <section style={{ border: '1px solid black', padding: '20px' }}>
             <h2>Usage Statistics</h2>
-            <div style={{ 
-              background: '#d4edda', 
-              border: '1px solid #c3e6cb', 
-              padding: '10px', 
-              marginBottom: '15px',
-              color: '#155724'
-            }}>
-              <small><strong>Live Data:</strong> Usage statistics are now loaded from the backend API in real-time.</small>
-            </div>
             {dashboardLoading ? (
-              <p>Loading usage statistics...</p>
+              <p>Loading...</p>
             ) : dashboardError ? (
-              <div style={{ 
-                border: '1px solid #ff4444', 
-                padding: '10px', 
-                backgroundColor: '#ffe6e6',
-                color: '#cc0000'
-              }}>
-                <p><strong>Error loading dashboard data:</strong> {dashboardError}</p>
-                <button 
-                  onClick={fetchDashboardData}
-                  style={{ 
-                    padding: '5px 10px', 
-                    backgroundColor: '#cc0000', 
-                    color: 'white', 
-                    border: 'none',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Retry
-                </button>
-              </div>
+              <p style={{ color: '#666', fontStyle: 'italic' }}>
+                Usage statistics temporarily unavailable
+              </p>
             ) : dashboardData ? (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <tbody>
@@ -314,7 +263,9 @@ const Dashboard: React.FC = () => {
                 </tbody>
               </table>
             ) : (
-              <p>No dashboard data available</p>
+              <p style={{ color: '#666', fontStyle: 'italic' }}>
+                No data available
+              </p>
             )}
           </section>
 
