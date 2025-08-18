@@ -16,8 +16,13 @@ export default async function handler(req, res) {
   }
   
   try {
+    console.log(`Proxying ${req.method} request to: ${url}`);
+    console.log('Request headers:', req.headers);
+    console.log('Request body:', req.body);
+    
     const headers = {
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
     };
     
     // Forward authorization header
@@ -25,25 +30,51 @@ export default async function handler(req, res) {
       headers.Authorization = req.headers.authorization;
     }
     
-    const response = await fetch(url, {
+    const fetchOptions = {
       method: req.method,
       headers,
-      body: req.method !== 'GET' ? JSON.stringify(req.body) : undefined,
-    });
+    };
     
-    const data = await response.text();
+    // Add body for non-GET requests
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      fetchOptions.body = JSON.stringify(req.body);
+    }
     
+    const response = await fetch(url, fetchOptions);
+    
+    console.log(`Response status: ${response.status}`);
+    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+    
+    const contentType = response.headers.get('content-type');
+    
+    // Set the status first
     res.status(response.status);
     
-    // Try to parse as JSON, otherwise return as text
-    try {
-      const jsonData = JSON.parse(data);
-      res.json(jsonData);
-    } catch {
-      res.send(data);
+    // Handle different content types
+    if (contentType && contentType.includes('application/json')) {
+      const data = await response.json();
+      console.log('JSON response data:', data);
+      res.json(data);
+    } else {
+      const text = await response.text();
+      console.log('Text response data:', text);
+      
+      // Try to parse as JSON if it looks like JSON
+      try {
+        const jsonData = JSON.parse(text);
+        res.json(jsonData);
+      } catch {
+        // If not JSON, return as text
+        res.setHeader('Content-Type', 'text/plain');
+        res.send(text);
+      }
     }
   } catch (error) {
     console.error('Proxy error:', error);
-    res.status(500).json({ error: 'Proxy error' });
+    res.status(500).json({ 
+      error: 'Proxy error',
+      message: error.message,
+      url: url 
+    });
   }
 }
