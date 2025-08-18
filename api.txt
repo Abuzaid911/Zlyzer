@@ -1,0 +1,78 @@
+post/auth/signup
+curl https://zanalyzer.fly.dev/auth/signup \
+  --request POST \
+  --header 'authorization: '
+
+  get/api/user/dashboard
+  curl https://zanalyzer.fly.dev/api/user/dashboard \
+  --header 'authorization: '
+  {
+  "numReqs": 1,
+  "videoAnalysisFreeQuota": 1,
+  "videoAnalysisPaidQuota": 1,
+  "reqs": [
+    {
+      "id": "string",
+      "userId": "123e4567-e89b-12d3-a456-426614174000",
+      "type": "string",
+      "url": "string",
+      "status": "string",
+      "videoResultId": "string",
+      "errorMessage": "string",
+      "processingTimeMs": 1,
+      "createdAt": null,
+      "updatedAt": null,
+      "startedAt": null,
+      "completedAt": null,
+      "result": {
+        "analysisResult": "string",
+        "processingTime": 1
+      }
+    }
+  ]
+}
+
+get/api/analysis-requests/{requestId}
+curl 'https://zanalyzer.fly.dev/api/analysis-requests/{requestId}' \
+  --header 'authorization: '
+  {
+  "id": "string",
+  "userId": "123e4567-e89b-12d3-a456-426614174000",
+  "type": "string",
+  "url": "string",
+  "status": "string",
+  "videoResultId": "string",
+  "errorMessage": "string",
+  "processingTimeMs": 1,
+  "createdAt": null,
+  "updatedAt": null,
+  "startedAt": null,
+  "completedAt": null,
+  "result": {
+    "id": "string",
+    "tiktokVideoId": "string",
+    "analysisResult": "string",
+    "analysisMetadata": null,
+    "processingTime": 1,
+    "createdAt": null
+  }
+}
+
+post/api/analysis-requests/
+curl https://zanalyzer.fly.dev/api/analysis-requests/ \
+  --request POST \
+  --header 'authorization: ' \
+  --header 'x-session-id: ' \
+  --header 'user-agent: ' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "videoUrl": ""
+}'
+
+{
+  "message": "string",
+  "jobId": "string",
+  "status": "string",
+  "resultId": "string",
+  "resultAnalysis": "string"
+}

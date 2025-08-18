@@ -20,11 +20,21 @@ export default async function handler(req, res) {
     const headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      'User-Agent': 'Zlyzer-Frontend/1.0',
     };
     
     // Forward authorization header
     if (req.headers.authorization) {
       headers.Authorization = req.headers.authorization;
+    }
+    
+    // Forward all relevant headers
+    if (req.headers['x-session-id']) {
+      headers['x-session-id'] = req.headers['x-session-id'];
+    }
+    
+    if (req.headers['user-agent']) {
+      headers['User-Agent'] = req.headers['user-agent'];
     }
     
     const fetchOptions = {

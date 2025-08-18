@@ -69,7 +69,9 @@ export class ApiService {
 
   private getHeaders(): HeadersInit {
     const headers: HeadersInit = {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'User-Agent': 'Zlyzer-Frontend/1.0'
     }
 
     if (this.token) {
