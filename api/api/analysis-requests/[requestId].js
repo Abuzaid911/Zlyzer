@@ -1,8 +1,6 @@
 export default async function handler(req, res) {
-  const { slug } = req.query;
-  const path = Array.isArray(slug) ? slug.join('/') : slug;
-  
-  const url = `https://zanalyzer.fly.dev/api/${path}`;
+  const { requestId } = req.query;
+  const url = `https://zanalyzer.fly.dev/api/analysis-requests/${requestId}`;
   
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
