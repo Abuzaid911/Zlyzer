@@ -36,6 +36,7 @@ const Dashboard: React.FC = () => {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [dashboardLoading, setDashboardLoading] = useState(true)
   const [dashboardError, setDashboardError] = useState<string | null>(null)
+  const [urlTransformed, setUrlTransformed] = useState(false)
 
   useEffect(() => {
     // Set the API token when user changes
@@ -72,6 +73,36 @@ const Dashboard: React.FC = () => {
     }
   }
 
+  const transformTikTokUrl = async (url: string): Promise<string> => {
+    // Handle vm.tiktok.com and other TikTok short URLs
+    if (url.includes('vm.tiktok.com') || url.includes('vt.tiktok.com')) {
+      try {
+        setStatusMessage('Resolving TikTok URL...')
+        const response = await fetch('/api/resolve-url', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ url })
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          if (data.resolvedUrl && data.resolvedUrl !== url) {
+            setStatusMessage('')
+            setUrlTransformed(true)
+            return data.resolvedUrl
+          }
+        }
+        setStatusMessage('')
+      } catch (error) {
+        // If resolution fails, continue with original URL
+        setStatusMessage('')
+      }
+    }
+    return url
+  }
+
   const handleAnalyzeVideo = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!videoUrl.trim()) return
@@ -81,7 +112,17 @@ const Dashboard: React.FC = () => {
     setCurrentAnalysis(null)
     
     try {
-      const data = await apiService.submitAnalysisRequest(videoUrl)
+      // Transform the URL if it's a TikTok short link
+      const transformedUrl = await transformTikTokUrl(videoUrl)
+      
+      // Update the input field with the transformed URL if it changed
+      if (transformedUrl !== videoUrl) {
+        setVideoUrl(transformedUrl)
+      } else {
+        setUrlTransformed(false)
+      }
+      
+      const data = await apiService.submitAnalysisRequest(transformedUrl)
       console.log('Analysis request response:', data)
       
       if (data.status === 'cached') {
@@ -97,6 +138,7 @@ const Dashboard: React.FC = () => {
         pollAnalysisStatus(requestId)
       }
       setVideoUrl('')
+      setUrlTransformed(false)
     } catch (error) {
       setStatusMessage('Unable to submit analysis request. Please try again.')
     } finally {
@@ -180,7 +222,10 @@ const Dashboard: React.FC = () => {
                   type="url"
                   id="videoUrl"
                   value={videoUrl}
-                  onChange={(e) => setVideoUrl(e.target.value)}
+                  onChange={(e) => {
+                    setVideoUrl(e.target.value)
+                    setUrlTransformed(false)
+                  }}
                   placeholder="https://www.tiktok.com/@username/video/..."
                   style={{ 
                     width: '100%', 
@@ -191,6 +236,16 @@ const Dashboard: React.FC = () => {
                   }}
                   required
                 />
+                {urlTransformed && (
+                  <small style={{ 
+                    color: '#28a745', 
+                    fontSize: '12px', 
+                    marginTop: '5px', 
+                    display: 'block' 
+                  }}>
+                    ✅ Short URL resolved to full TikTok link
+                  </small>
+                )}
               </p>
               <p>
                 <button
