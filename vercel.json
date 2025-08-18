@@ -4,6 +4,10 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/auth/(.*)",
+      "destination": "/api/authentication/$1"
+    },
+    {
       "source": "/((?!api|auth).*)",
       "destination": "/index.html"
     }
