@@ -1,3 +1,7 @@
+"use client";
+
+import Image from "next/image";
+import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
 import { cn } from "@/lib/utils";
@@ -19,31 +23,32 @@ export default function Screenshot({
   height,
   className,
 }: ScreenshotProps) {
-  // Simple theme detection based on system preference
-  const [isDark, setIsDark] = useState(false);
+  const { resolvedTheme } = useTheme();
+  const [src, setSrc] = useState<string | null>(null);
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    setIsDark(mediaQuery.matches);
+    if (resolvedTheme) {
+      setSrc(resolvedTheme === "light" ? srcLight : srcDark || srcLight);
+    }
+  }, [resolvedTheme, srcLight, srcDark]);
 
-    const handleChange = (e: MediaQueryListEvent) => {
-      setIsDark(e.matches);
-    };
-
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
-
-  const src = isDark && srcDark ? srcDark : srcLight;
+  if (!src) {
+    return (
+      <div
+        style={{ width, height }}
+        className={cn("bg-muted", className)}
+        aria-label={alt}
+      />
+    );
+  }
 
   return (
-    <img
+    <Image
       src={src}
       alt={alt}
       width={width}
       height={height}
-      className={cn("max-w-full h-auto", className)}
-      style={{ aspectRatio: `${width}/${height}` }}
+      className={className}
     />
   );
 }

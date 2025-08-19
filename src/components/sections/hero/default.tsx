@@ -1,16 +1,15 @@
 import { ArrowRightIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import { ReactNode } from "react";
 
-import { siteConfig } from "@/config/site";
 import { cn } from "@/lib/utils";
 
-import Github from "@/components/logos/github";
-import { Badge } from "@/components/ui/badge";
-import { Button, type ButtonProps } from "@/components/ui/button";
-import Glow from "@/components/ui/glow";
-import { Mockup, MockupFrame } from "@/components/ui/mockup";
-import Screenshot from "@/components/ui/screenshot";
-import { Section } from "@/components/ui/section";
+import Github from "../../logos/github";
+import { Badge } from "../../ui/badge";
+import { Button, type ButtonProps } from "../../ui/button";
+import Glow from "../../ui/glow";
+import { Mockup, MockupFrame } from "../../ui/mockup";
+import Screenshot from "../../ui/screenshot";
+import { Section } from "../../ui/section";
 
 interface HeroButtonProps {
   href: string;
@@ -30,13 +29,13 @@ interface HeroProps {
 }
 
 export default function Hero({
-  title = "Advanced TikTok Video Analysis",
-  description = "Unlock insights from TikTok videos with our powerful AI-driven analysis platform. Get comprehensive analytics, performance metrics, and content intelligence.",
+  title = "Give your big idea the design it deserves",
+  description = "Professionally designed blocks and templates built with React, Shadcn/ui and Tailwind that will help your product stand out.",
   mockup = (
     <Screenshot
       srcLight="/dashboard-light.png"
       srcDark="/dashboard-dark.png"
-      alt="Zlyzer Dashboard Screenshot"
+      alt="Launch UI app screenshot"
       width={1248}
       height={765}
       className="w-full"
@@ -45,9 +44,9 @@ export default function Hero({
   badge = (
     <Badge variant="outline" className="animate-appear">
       <span className="text-muted-foreground">
-        Now with URL transformation!
+        New version of Launch UI is out!
       </span>
-      <a href={siteConfig.getStartedUrl} className="flex items-center gap-1">
+      <a href="https://www.launchuicomponents.com/" className="flex items-center gap-1">
         Get started
         <ArrowRightIcon className="size-3" />
       </a>
@@ -55,12 +54,12 @@ export default function Hero({
   ),
   buttons = [
     {
-      href: siteConfig.getStartedUrl,
+      href: "https://www.launchuicomponents.com/",
       text: "Get Started",
       variant: "default",
     },
     {
-      href: siteConfig.links.github,
+      href: "https://www.launchuicomponents.com/",
       text: "Github",
       variant: "glow",
       icon: <Github className="mr-2 size-4" />,

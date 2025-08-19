@@ -26,6 +26,81 @@ interface DashboardData {
   }>
 }
 
+const formatAnalysisToHtml = (text: string): string => {
+  const lines = text.split('\n')
+  let html = ''
+  let inList = false
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim()
+    
+    if (!line) {
+      if (inList) {
+        html += '</ul>'
+        inList = false
+      }
+      html += '<div style="margin: 10px 0;"></div>'
+      continue
+    }
+    
+    // Headers with emojis (🔍 1. Title)
+    if (/^([🔍🎬🗣️🎧🎨🎯👥🧠])\s*(\d+\.\s*.+)$/.test(line)) {
+      if (inList) {
+        html += '</ul>'
+        inList = false
+      }
+      const match = line.match(/^([🔍🎬🗣️🎧🎨🎯👥🧠])\s*(\d+\.\s*.+)$/)
+      if (match) {
+        html += `<h3 style="color: #2c3e50; margin: 25px 0 15px 0; padding: 10px 0 8px 0; border-bottom: 2px solid #3498db; font-size: 18px;">${match[1]} ${match[2]}</h3>`
+      }
+      continue
+    }
+    
+    // List items (*, -, •)
+    if (/^\s*[\*\-\•]\s*/.test(line)) {
+      if (!inList) {
+        html += '<ul style="margin: 10px 0; padding-left: 25px; list-style-type: disc;">'
+        inList = true
+      }
+      let listContent = line.replace(/^\s*[\*\-\•]\s*/, '')
+      
+      // Format bold text in list items
+      listContent = listContent.replace(/\*\*(.+?)\*\*/g, '<strong style="color: #2980b9;">$1</strong>')
+      
+      // Format timestamps
+      listContent = listContent.replace(/\((\d+:\d+(?:-\d+:\d+)?)\)/g, '<span style="background: #e8f4f8; padding: 2px 6px; border-radius: 3px; font-weight: bold; color: #2980b9; font-size: 12px;">$1</span>')
+      
+      html += `<li style="margin: 6px 0; line-height: 1.5;">${listContent}</li>`
+      continue
+    }
+    
+    // Regular paragraphs
+    if (inList) {
+      html += '</ul>'
+      inList = false
+    }
+    
+    let paragraph = line
+    
+    // Format bold text
+    paragraph = paragraph.replace(/\*\*(.+?)\*\*/g, '<strong style="color: #2c3e50;">$1</strong>')
+    
+    // Format italic text
+    paragraph = paragraph.replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    
+    // Format timestamps
+    paragraph = paragraph.replace(/\((\d+:\d+(?:-\d+:\d+)?)\)/g, '<span style="background: #e8f4f8; padding: 2px 6px; border-radius: 3px; font-weight: bold; color: #2980b9; font-size: 12px;">$1</span>')
+    
+    html += `<p style="margin: 8px 0; line-height: 1.6;">${paragraph}</p>`
+  }
+  
+  if (inList) {
+    html += '</ul>'
+  }
+  
+  return html
+}
+
 const Dashboard: React.FC = () => {
   const { user, signOut, getAccessToken } = useAuth()
   const [videoUrl, setVideoUrl] = useState('')
@@ -279,15 +354,35 @@ const Dashboard: React.FC = () => {
           {/* Analysis Results */}
           {currentAnalysis && (
             <section style={{ border: '1px solid black', padding: '20px', marginBottom: '30px' }}>
-              <h2>Analysis Results</h2>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                <h2 style={{ margin: 0 }}>Analysis Results</h2>
+                <button
+                  onClick={() => navigator.clipboard.writeText(currentAnalysis)}
+                  style={{
+                    padding: '8px 16px',
+                    fontSize: '12px',
+                    backgroundColor: '#3498db',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                  title="Copy analysis to clipboard"
+                >
+                  📋 Copy
+                </button>
+              </div>
               <div style={{ 
-                border: '1px solid black', 
-                padding: '15px', 
-                backgroundColor: '#f9f9f9',
-                fontFamily: 'monospace',
-                whiteSpace: 'pre-wrap'
+                border: '1px solid #ddd', 
+                padding: '25px', 
+                backgroundColor: '#ffffff',
+                borderRadius: '8px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                fontSize: '14px',
+                maxHeight: '600px',
+                overflowY: 'auto'
               }}>
-                {currentAnalysis}
+                <div dangerouslySetInnerHTML={{ __html: formatAnalysisToHtml(currentAnalysis) }} />
               </div>
             </section>
           )}
