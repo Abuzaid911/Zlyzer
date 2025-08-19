@@ -1,6 +1,5 @@
 import Dashboard from './components/Dashboard'
 import { useAuth } from './contexts/AuthContext'
-import Hero from "@/components/sections/hero/default";
 
 function App() {
   const { user, loading, signInWithGoogle } = useAuth()
