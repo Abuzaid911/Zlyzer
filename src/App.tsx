@@ -1,5 +1,6 @@
 import Dashboard from './components/Dashboard'
 import { useAuth } from './contexts/AuthContext'
+import Hero from "@/components/sections/hero/default";
 
 function App() {
   const { user, loading, signInWithGoogle } = useAuth()
@@ -17,121 +18,76 @@ function App() {
   }
 
   return (
-    <div style={{ backgroundColor: 'white', color: 'black', minHeight: '100vh' }}>
-      {/* Classic HTML Header */}
-      <div className="container">
-        <header className="center">
-          <h1>ZLYZER</h1>
-          <hr />
-          <p><strong>AI-Powered TikTok Analytics Tool</strong></p>
-        </header>
+    <div style={{ minHeight: '100vh' }}>
+      {/* Hero Section */}
+      <Hero 
+        buttons={false}
+        mockup={false}
+      />
+      
+      {/* Custom CTA Buttons */}
+      <div className="flex justify-center gap-4 mt-8 mb-16">
+        <button 
+          onClick={signInWithGoogle}
+          className="bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-3 rounded-lg font-semibold text-lg transition-colors"
+        >
+          Start Free Analysis
+        </button>
+        <a 
+          href="https://github.com/Abuzaid911/Zlyzer"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="bg-secondary text-secondary-foreground hover:bg-secondary/90 px-6 py-3 rounded-lg font-semibold text-lg transition-colors inline-flex items-center"
+        >
+          <span className="mr-2">⭐</span>
+          View on GitHub
+        </a>
+      </div>
 
-        {/* Main Content */}
+      {/* Additional Content */}
+      <div className="container" style={{ marginTop: '4rem' }}>
         <main>
-          <div className="center">
-            <h2>Turn Your TikToks Into Viral Gold</h2>
-            <p>Stop guessing what works. Our AI analyzes viral patterns and gives you the exact blueprint for TikTok success.</p>
-            
-            {/* Stats */}
-            <p>
-              <strong>500,000+</strong> Videos Analyzed | 
-              <strong> 95%</strong> Accuracy Rate | 
-              <strong> 3.2x</strong> Average Growth
-            </p>
-
-            {/* Primary CTA */}
-            <p>
-              <button onClick={signInWithGoogle} style={{ 
-                padding: '10px 20px', 
-                fontSize: '16px',
-                fontWeight: 'bold'
-              }}>
-                Sign in with Google - Start Free Analysis
-              </button>
-            </p>
-
-            <p><small>✓ No Credit Card Required ✓ Instant Results ✓ 10 Free Videos ✓ AI Powered</small></p>
-          </div>
-
-          <hr />
 
           {/* Features */}
-          <section>
-            <h2 className="center">Three Ways We Make You Go Viral</h2>
+          <section className="text-center mb-16">
+            <h2 className="text-3xl font-bold mb-12">Key Features</h2>
             
-            <h3>1. Viral Pattern Detection</h3>
-            <p>Discover the exact hooks, timing, and content elements that made videos go viral. Copy proven formulas for guaranteed engagement.</p>
-            <p><strong>Result:</strong> +300% average engagement boost</p>
+            <div className="grid md:grid-cols-3 gap-8 mb-16">
+              <div className="p-6 border rounded-lg">
+                <h3 className="text-xl font-semibold mb-4">🎯 Viral Pattern Detection</h3>
+                <p className="text-muted-foreground">Discover the exact hooks, timing, and content elements that made videos go viral.</p>
+              </div>
 
-            <h3>2. Competitor Spy Tool</h3>
-            <p>See what's working for your competitors before they know it. Get their best-performing content strategies and trending topics.</p>
-            <p><strong>Result:</strong> Beat 90% of your competition</p>
+              <div className="p-6 border rounded-lg">
+                <h3 className="text-xl font-semibold mb-4">🔍 Content Analysis</h3>
+                <p className="text-muted-foreground">Get detailed insights on engagement patterns, trending topics, and audience behavior.</p>
+              </div>
 
-            <h3>3. Content Gap Finder</h3>
-            <p>Find untapped content opportunities in your niche. Get specific video ideas that your audience wants but nobody's making yet.</p>
-            <p><strong>Result:</strong> 10+ viral video ideas daily</p>
+              <div className="p-6 border rounded-lg">
+                <h3 className="text-xl font-semibold mb-4">📈 Performance Metrics</h3>
+                <p className="text-muted-foreground">Track your progress with comprehensive analytics and growth recommendations.</p>
+              </div>
+            </div>
           </section>
-
-          <hr />
-
-          {/* Testimonial */}
-          <section>
-            <h2 className="center">What Users Say</h2>
-            <blockquote style={{ 
-              fontStyle: 'italic', 
-              textAlign: 'center', 
-              margin: '2em 0',
-              padding: '1em',
-              border: '1px solid black'
-            }}>
-              "Went from 10K to 150K followers in 3 months using Zlyzer's insights. Complete game changer!"
-              <br />
-              <cite>- Sarah M., Content Creator (150K followers)</cite>
-            </blockquote>
-          </section>
-
-          <hr />
 
           {/* Final CTA */}
-          <section className="center">
-            <h2>Ready to Go Viral?</h2>
-            <p><strong>Join 50,000+ creators who've already boosted their TikTok engagement by 300%</strong></p>
+          <section className="text-center mb-16 p-8 bg-secondary/20 rounded-lg">
+            <h2 className="text-2xl font-bold mb-4">Ready to Analyze Your TikTok Content?</h2>
+            <p className="text-muted-foreground mb-6">Get instant insights and start optimizing your content strategy today.</p>
             
-            <div style={{ 
-              border: '2px solid black', 
-              padding: '20px', 
-              margin: '20px 0',
-              backgroundColor: '#f9f9f9'
-            }}>
-              <p><strong>⏰ LIMITED TIME OFFER</strong></p>
-              <p style={{ fontSize: '1.2em' }}><strong>Get 10 Free Analyses</strong></p>
-              <p><small>Usually $97/month • No credit card required</small></p>
-            </div>
-
-            <p>
-              <button onClick={signInWithGoogle} style={{ 
-                padding: '15px 30px', 
-                fontSize: '18px',
-                fontWeight: 'bold'
-              }}>
-                CLAIM YOUR FREE ANALYSIS NOW
-              </button>
-            </p>
+            <button 
+              onClick={signInWithGoogle}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-4 rounded-lg font-semibold text-lg transition-colors"
+            >
+              Get Started Now
+            </button>
             
-            <p><small>✓ Instant access ✓ No spam ✓ Cancel anytime</small></p>
+            <p className="text-sm text-muted-foreground mt-4">✓ Free to start ✓ No credit card required ✓ Instant results</p>
           </section>
 
-          <hr />
-
           {/* Footer */}
-          <footer className="center">
-            <p><small>© 2024 Zlyzer. All rights reserved.</small></p>
-            <p>
-              <a href="#about">About</a> | 
-              <a href="#privacy">Privacy</a> | 
-              <a href="#terms">Terms</a> | 
-              <a href="#contact">Contact</a>
-            </p>
+          <footer className="text-center py-8 border-t">
+            <p className="text-sm text-muted-foreground">© 2024 Zlyzer. All rights reserved.</p>
           </footer>
         </main>
       </div>
