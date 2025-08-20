@@ -13,154 +13,142 @@ const Navbar: React.FC<NavbarProps> = ({ user, onSignOut, onSignIn }) => {
       top: 0,
       left: 0,
       right: 0,
-      zIndex: 1000,
       background: 'rgba(255, 255, 255, 0.95)',
       backdropFilter: 'blur(10px)',
-      WebkitBackdropFilter: 'blur(10px)',
-      borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
-      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+      borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+      zIndex: 1000,
+      padding: '0'
     }}>
       <div style={{
         maxWidth: '1200px',
         margin: '0 auto',
-        padding: '1rem 2rem',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
+        padding: '1rem 2rem',
+        height: '70px'
       }}>
         {/* Logo */}
         <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
+          fontSize: '1.8rem',
+          fontWeight: '800',
+          background: 'linear-gradient(135deg, #10b981 0%, #3b82f6 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+          letterSpacing: '-0.5px'
         }}>
-          <div style={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            width: '32px',
-            height: '32px',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-            fontWeight: 'bold',
-            fontSize: '16px',
-          }}>
-            Z
-          </div>
-          <h1 style={{
-            margin: 0,
-            fontSize: '24px',
-            fontWeight: '700',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-          }}>
-            ZLYZER
-          </h1>
+          Zlyzer
         </div>
 
-        {/* Navigation Items */}
+        {/* Navigation Links */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '2rem',
+          gap: '2rem'
         }}>
-          {user ? (
+          {!user && (
             <>
-              {/* User Info */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '0.5rem 1rem',
-                background: 'rgba(255, 255, 255, 0.7)',
-                borderRadius: '12px',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
+              <a href="#" style={{
+                color: '#6b7280',
+                textDecoration: 'none',
+                fontWeight: '500',
+                transition: 'color 0.2s ease'
               }}>
-                <div style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                }}>
-                  {user?.user_metadata?.full_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
-                </div>
-                <span style={{
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: '#374151',
-                  maxWidth: '150px',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}>
-                  {user?.user_metadata?.full_name || user?.email}
-                </span>
-              </div>
+                Home
+              </a>
+              <a href="#" style={{
+                color: '#6b7280',
+                textDecoration: 'none',
+                fontWeight: '500',
+                transition: 'color 0.2s ease'
+              }}>
+                Product
+              </a>
+              <a href="#" style={{
+                color: '#6b7280',
+                textDecoration: 'none',
+                fontWeight: '500',
+                transition: 'color 0.2s ease'
+              }}>
+                FAQ
+              </a>
+              <a href="#" style={{
+                color: '#6b7280',
+                textDecoration: 'none',
+                fontWeight: '500',
+                transition: 'color 0.2s ease'
+              }}>
+                Blog
+              </a>
+              <a href="#" style={{
+                color: '#6b7280',
+                textDecoration: 'none',
+                fontWeight: '500',
+                transition: 'color 0.2s ease'
+              }}>
+                About Us
+              </a>
+            </>
+          )}
 
-              {/* Sign Out Button */}
-              <button
-                onClick={onSignOut}
-                style={{
-                  padding: '0.5rem 1.25rem',
-                  background: 'rgba(239, 68, 68, 0.1)',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                  borderRadius: '8px',
-                  color: '#dc2626',
-                  fontSize: '14px',
+          {/* Auth Buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            {user ? (
+              <>
+                <span style={{
+                  color: '#374151',
+                  fontWeight: '500'
+                }}>
+                  {user.user_metadata?.full_name || user.email}
+                </span>
+                <button
+                  onClick={onSignOut}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    background: 'transparent',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    color: '#374151',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <button style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#6b7280',
                   fontWeight: '500',
                   cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  backdropFilter: 'blur(10px)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'
-                  e.currentTarget.style.transform = 'translateY(-1px)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'
-                  e.currentTarget.style.transform = 'translateY(0)'
-                }}
-              >
-                Sign Out
-              </button>
-            </>
-          ) : (
-            /* Sign In Button */
-            <button
-              onClick={onSignIn}
-              style={{
-                padding: '0.75rem 1.5rem',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                border: 'none',
-                borderRadius: '12px',
-                color: 'white',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)'
-                e.currentTarget.style.boxShadow = '0 8px 25px rgba(102, 126, 234, 0.6)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.4)'
-              }}
-            >
-              Sign in with Google
-            </button>
-          )}
+                  padding: '0.5rem 1rem'
+                }}>
+                  Login
+                </button>
+                <button
+                  onClick={onSignIn}
+                  style={{
+                    background: 'linear-gradient(135deg, #10b981 0%, #3b82f6 100%)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: 'white',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    padding: '0.75rem 1.5rem',
+                    transition: 'all 0.2s ease',
+                    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                  }}
+                >
+                  Sign Up
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </nav>
