@@ -102,7 +102,7 @@ const formatAnalysisToHtml = (text: string): string => {
 }
 
 const Dashboard: React.FC = () => {
-  const { user, signOut, getAccessToken } = useAuth()
+  const { user, getAccessToken } = useAuth()
   const [videoUrl, setVideoUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const [currentAnalysis, setCurrentAnalysis] = useState<string | null>(null)
@@ -264,13 +264,7 @@ const Dashboard: React.FC = () => {
     poll()
   }
 
-  const handleSignOut = async () => {
-    try {
-      await signOut()
-    } catch (error) {
-      // Silently handle sign out errors
-    }
-  }
+
 
   return (
     <div style={{ 

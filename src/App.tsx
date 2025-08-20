@@ -322,7 +322,6 @@ function App() {
               <blockquote style={{ 
                 fontSize: '1.25rem',
                 fontStyle: 'italic', 
-                margin: '0',
                 opacity: '0.95',
                 maxWidth: '600px',
                 margin: '0 auto'
