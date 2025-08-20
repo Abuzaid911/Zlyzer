@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react';
 
 interface NavbarProps {
   user?: any
@@ -7,152 +7,340 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ user, onSignOut, onSignIn }) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const isAuthenticated = !!user;
+
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
+
+  const handleAuthAction = () => {
+    if (isAuthenticated) {
+      onSignOut?.();
+    } else {
+      onSignIn?.();
+    }
+  };
+
   return (
-    <nav style={{
+    <header style={{
       position: 'fixed',
       top: 0,
       left: 0,
       right: 0,
+      zIndex: 50,
+      padding: '1.5rem 1rem',
       background: 'rgba(255, 255, 255, 0.95)',
       backdropFilter: 'blur(10px)',
-      borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
-      zIndex: 1000,
-      padding: '0'
+      borderBottom: '1px solid rgba(0, 0, 0, 0.1)'
     }}>
       <div style={{
-        maxWidth: '1200px',
         margin: '0 auto',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '1rem 2rem',
-        height: '70px'
+        maxWidth: '1280px'
       }}>
-        {/* Logo */}
-        <div style={{
-          fontSize: '1.8rem',
-          fontWeight: '800',
-          background: 'linear-gradient(135deg, #10b981 0%, #3b82f6 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
-          letterSpacing: '-0.5px'
-        }}>
-          Zlyzer
-        </div>
-
-        {/* Navigation Links */}
-        <div style={{
+        <nav style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '2rem'
+          justifyContent: 'space-between'
         }}>
-          {!user && (
-            <>
-              <a href="#" style={{
-                color: '#6b7280',
-                textDecoration: 'none',
-                fontWeight: '500',
-                transition: 'color 0.2s ease'
-              }}>
-                Home
-              </a>
-              <a href="#" style={{
-                color: '#6b7280',
-                textDecoration: 'none',
-                fontWeight: '500',
-                transition: 'color 0.2s ease'
-              }}>
-                Product
-              </a>
-              <a href="#" style={{
-                color: '#6b7280',
-                textDecoration: 'none',
-                fontWeight: '500',
-                transition: 'color 0.2s ease'
-              }}>
-                FAQ
-              </a>
-              <a href="#" style={{
-                color: '#6b7280',
-                textDecoration: 'none',
-                fontWeight: '500',
-                transition: 'color 0.2s ease'
-              }}>
-                Blog
-              </a>
-              <a href="#" style={{
-                color: '#6b7280',
-                textDecoration: 'none',
-                fontWeight: '500',
-                transition: 'color 0.2s ease'
-              }}>
-                About Us
-              </a>
-            </>
-          )}
+          {/* Logo */}
+          <div style={{
+            fontSize: 'clamp(1.875rem, 4vw, 3rem)',
+            fontWeight: '400',
+            color: '#10b981',
+            fontFamily: 'Galindo, cursive'
+          }}>
+            Zlyzer
+          </div>
 
-          {/* Auth Buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            {user ? (
+          {/* Desktop Navigation */}
+          <div className="desktop-nav" style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '2rem'
+          }}>
+            {['Home', 'Product', 'FAQ', 'Blog', 'About Us'].map((item, index) => (
+              <button 
+                key={item}
+                style={{
+                  fontSize: index === 0 ? '1.125rem' : '1rem',
+                  fontWeight: '500',
+                  color: index === 0 ? '#000000' : '#a3a3a3',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'color 0.2s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.color = '#10b981'}
+                onMouseLeave={(e) => e.currentTarget.style.color = index === 0 ? '#000000' : '#a3a3a3'}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+
+          {/* Desktop Auth Buttons */}
+          <div className="desktop-auth" style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            {isAuthenticated ? (
               <>
-                <span style={{
-                  color: '#374151',
-                  fontWeight: '500'
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem'
                 }}>
-                  {user.user_metadata?.full_name || user.email}
-                </span>
+                  <div style={{
+                    width: '2rem',
+                    height: '2rem',
+                    backgroundColor: '#10b981',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <span style={{
+                      color: 'white',
+                      fontWeight: '600',
+                      fontSize: '0.875rem',
+                      fontFamily: 'Nunito Sans, sans-serif'
+                    }}>
+                      {user?.user_metadata?.full_name?.charAt(0)?.toUpperCase() || 
+                       user?.email?.charAt(0)?.toUpperCase() || 'U'}
+                    </span>
+                  </div>
+                  <span style={{
+                    fontSize: '1rem',
+                    fontWeight: '500',
+                    color: '#000000',
+                    fontFamily: 'Nunito Sans, sans-serif'
+                  }}>
+                    {user?.user_metadata?.full_name || user?.email || 'User'}
+                  </span>
+                </div>
                 <button
-                  onClick={onSignOut}
+                  onClick={handleAuthAction}
                   style={{
                     padding: '0.5rem 1rem',
-                    background: 'transparent',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '8px',
-                    color: '#374151',
+                    border: '1px solid #10b981',
+                    color: '#10b981',
+                    fontSize: '1rem',
                     fontWeight: '500',
+                    borderRadius: '0.5rem',
+                    background: 'transparent',
                     cursor: 'pointer',
-                    transition: 'all 0.2s ease'
+                    transition: 'background-color 0.2s ease',
+                    fontFamily: 'Nunito Sans, sans-serif'
                   }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0fdf4'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
-                  Sign Out
+                  Logout
                 </button>
               </>
             ) : (
               <>
-                <button style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#6b7280',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  padding: '0.5rem 1rem'
-                }}>
+                <button
+                  onClick={handleAuthAction}
+                  style={{
+                    fontSize: '1rem',
+                    fontWeight: '500',
+                    color: '#a3a3a3',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'color 0.2s ease',
+                    fontFamily: 'Nunito Sans, sans-serif'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#10b981'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = '#a3a3a3'}
+                >
                   Login
                 </button>
                 <button
-                  onClick={onSignIn}
+                  onClick={handleAuthAction}
                   style={{
-                    background: 'linear-gradient(135deg, #10b981 0%, #3b82f6 100%)',
+                    padding: '0.5rem 1rem',
+                    backgroundColor: '#10b981',
+                    color: '#f9fafb',
+                    fontSize: '1rem',
+                    fontWeight: '500',
+                    borderRadius: '0.5rem',
                     border: 'none',
-                    borderRadius: '8px',
-                    color: 'white',
-                    fontWeight: '600',
                     cursor: 'pointer',
-                    padding: '0.75rem 1.5rem',
-                    transition: 'all 0.2s ease',
-                    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                    transition: 'background-color 0.2s ease',
+                    fontFamily: 'Nunito Sans, sans-serif'
                   }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
                 >
                   Sign Up
                 </button>
               </>
             )}
           </div>
-        </div>
-      </div>
-    </nav>
-  )
-}
 
-export default Navbar
+          {/* Mobile menu button */}
+          <button
+            className="mobile-menu-btn"
+            style={{
+              display: 'block',
+              padding: '0.5rem',
+              color: '#000000',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'color 0.2s ease'
+            }}
+            onClick={toggleMenu}
+            onMouseEnter={(e) => e.currentTarget.style.color = '#10b981'}
+            onMouseLeave={(e) => e.currentTarget.style.color = '#000000'}
+          >
+            <svg style={{ width: '1.5rem', height: '1.5rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {isMenuOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
+        </nav>
+
+        {/* Mobile Navigation */}
+        {isMenuOpen && (
+          <div className="mobile-nav" style={{
+            display: 'block',
+            marginTop: '1rem',
+            paddingBottom: '1rem',
+            borderTop: '1px solid #e5e7eb'
+          }}>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem',
+              paddingTop: '1rem'
+            }}>
+              {['Home', 'Product', 'FAQ', 'Blog', 'About Us'].map((item, index) => (
+                <button 
+                  key={item}
+                  style={{
+                    fontSize: index === 0 ? '1.125rem' : '1rem',
+                    fontWeight: '500',
+                    color: index === 0 ? '#000000' : '#a3a3a3',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'color 0.2s ease',
+                    textAlign: 'left'
+                  }}
+                >
+                  {item}
+                </button>
+              ))}
+              
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+                paddingTop: '0.5rem'
+              }}>
+                {isAuthenticated ? (
+                  <>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      marginBottom: '0.5rem'
+                    }}>
+                      <div style={{
+                        width: '2rem',
+                        height: '2rem',
+                        backgroundColor: '#10b981',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <span style={{
+                          color: 'white',
+                          fontWeight: '600',
+                          fontSize: '0.875rem'
+                        }}>
+                          {user?.user_metadata?.full_name?.charAt(0)?.toUpperCase() || 
+                           user?.email?.charAt(0)?.toUpperCase() || 'U'}
+                        </span>
+                      </div>
+                      <span style={{
+                        fontSize: '1rem',
+                        fontWeight: '500',
+                        color: '#000000'
+                      }}>
+                        {user?.user_metadata?.full_name || user?.email || 'User'}
+                      </span>
+                    </div>
+                    <button
+                      onClick={handleAuthAction}
+                      style={{
+                        width: 'fit-content',
+                        padding: '0.5rem 1rem',
+                        border: '1px solid #10b981',
+                        color: '#10b981',
+                        fontSize: '1rem',
+                        fontWeight: '500',
+                        borderRadius: '0.5rem',
+                        background: 'transparent',
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s ease'
+                      }}
+                    >
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={handleAuthAction}
+                      style={{
+                        fontSize: '1rem',
+                        fontWeight: '500',
+                        color: '#a3a3a3',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'color 0.2s ease',
+                        textAlign: 'left'
+                      }}
+                    >
+                      Login
+                    </button>
+                    <button
+                      onClick={handleAuthAction}
+                      style={{
+                        width: 'fit-content',
+                        padding: '0.5rem 1rem',
+                        backgroundColor: '#10b981',
+                        color: '#f9fafb',
+                        fontSize: '1rem',
+                        fontWeight: '500',
+                        borderRadius: '0.5rem',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s ease'
+                      }}
+                    >
+                      Sign Up
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </header>
+  );
+};
+
+export default Navbar;
