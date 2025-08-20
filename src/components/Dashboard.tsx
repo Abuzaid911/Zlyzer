@@ -273,23 +273,63 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div style={{ backgroundColor: 'white', color: 'black', minHeight: '100vh' }}>
-      {/* Header */}
-      <div className="container">
-        <header style={{ borderBottom: '2px solid black', paddingBottom: '10px', marginBottom: '20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h1>ZLYZER DASHBOARD</h1>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-              <span>Welcome, {user?.user_metadata?.full_name || user?.email}</span>
-              <button onClick={handleSignOut}>Sign Out</button>
-            </div>
-          </div>
-        </header>
+    <div style={{ 
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      color: 'white',
+      padding: '2rem 0'
+    }}>
+      <div style={{ 
+        maxWidth: '1200px',
+        margin: '0 auto',
+        padding: '0 2rem'
+      }}>
+        <div style={{
+          textAlign: 'center',
+          marginBottom: '3rem'
+        }}>
+          <h1 style={{
+            fontSize: '3rem',
+            fontWeight: '800',
+            margin: '0 0 0.5rem 0',
+            background: 'linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}>
+            Dashboard
+          </h1>
+          <p style={{ 
+            fontSize: '1.2rem', 
+            opacity: '0.9',
+            margin: '0'
+          }}>
+            Welcome back, {user?.user_metadata?.full_name || user?.email}
+          </p>
+        </div>
 
         <main>
           {/* Analysis Form */}
-          <section style={{ border: '1px solid black', padding: '20px', marginBottom: '30px' }}>
-            <h2>Analyze TikTok Video</h2>
+          <section style={{ 
+            background: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(10px)',
+            borderRadius: '20px',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            padding: '2rem',
+            marginBottom: '2rem',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+          }}>
+            <h2 style={{ 
+              fontSize: '1.8rem', 
+              fontWeight: '700', 
+              marginBottom: '1.5rem',
+              background: 'linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}>
+              🎬 Analyze TikTok Video
+            </h2>
             <form onSubmit={handleAnalyzeVideo}>
               <p>
                 <label htmlFor="videoUrl"><strong>TikTok Video URL:</strong></label><br />
