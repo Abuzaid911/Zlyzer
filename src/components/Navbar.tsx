@@ -30,9 +30,9 @@ const Navbar: React.FC<NavbarProps> = ({ user, onSignOut, onSignIn }) => {
       right: 0,
       zIndex: 50,
       padding: '1.5rem 1rem',
-      background: 'rgba(255, 255, 255, 0.95)',
+      background: 'rgba(26, 0, 51, 0.95)',
       backdropFilter: 'blur(10px)',
-      borderBottom: '1px solid rgba(0, 0, 0, 0.1)'
+      borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
     }}>
       <div style={{
         margin: '0 auto',
@@ -47,7 +47,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onSignOut, onSignIn }) => {
           <div style={{
             fontSize: 'clamp(1.875rem, 4vw, 3rem)',
             fontWeight: '400',
-            color: '#10b981',
+            color: '#ffffff',
             fontFamily: 'Galindo, cursive'
           }}>
             Zlyzer
@@ -72,7 +72,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onSignOut, onSignIn }) => {
                   transition: 'color 0.2s ease'
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.color = '#10b981'}
-                onMouseLeave={(e) => e.currentTarget.style.color = index === 0 ? '#000000' : '#a3a3a3'}
+                onMouseLeave={(e) => e.currentTarget.style.color = index === 0 ? '#ffffff' : '#cccccc'}
               >
                 {item}
               </button>

@@ -81,11 +81,16 @@ export class ApiService {
     return headers
   }
 
-  async submitAnalysisRequest(videoUrl: string): Promise<AnalysisResponse> {
+  async submitAnalysisRequest(videoUrl: string, customPrompt?: string): Promise<AnalysisResponse> {
+    const requestBody: { videoUrl: string; customPrompt?: string } = { videoUrl }
+    if (customPrompt?.trim()) {
+      requestBody.customPrompt = customPrompt.trim()
+    }
+    
     const response = await fetch(`${API_BASE_URL}/api/analysis-requests/`, {
       method: 'POST',
       headers: this.getHeaders(),
-      body: JSON.stringify({ videoUrl })
+      body: JSON.stringify(requestBody)
     })
 
     if (!response.ok) {

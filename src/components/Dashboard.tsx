@@ -104,6 +104,7 @@ const formatAnalysisToHtml = (text: string): string => {
 const Dashboard: React.FC = () => {
   const { user, signOut, getAccessToken } = useAuth()
   const [videoUrl, setVideoUrl] = useState('')
+  const [customPrompt, setCustomPrompt] = useState('')
   const [loading, setLoading] = useState(false)
   const [currentAnalysis, setCurrentAnalysis] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string>('')
@@ -197,7 +198,7 @@ const Dashboard: React.FC = () => {
         setUrlTransformed(false)
       }
       
-      const data = await apiService.submitAnalysisRequest(transformedUrl)
+      const data = await apiService.submitAnalysisRequest(transformedUrl, customPrompt)
       console.log('Analysis request response:', data)
       
       if (data.status === 'cached') {
@@ -213,6 +214,7 @@ const Dashboard: React.FC = () => {
         pollAnalysisStatus(requestId)
       }
       setVideoUrl('')
+      setCustomPrompt('')
       setUrlTransformed(false)
     } catch (error) {
       setStatusMessage('Unable to submit analysis request. Please try again.')
@@ -321,6 +323,33 @@ const Dashboard: React.FC = () => {
                     ✅ Short URL resolved to full TikTok link
                   </small>
                 )}
+              </p>
+              <p>
+                <label htmlFor="customPrompt"><strong>Custom Analysis Prompt (Optional):</strong></label><br />
+                <textarea
+                  id="customPrompt"
+                  value={customPrompt}
+                  onChange={(e) => setCustomPrompt(e.target.value)}
+                  placeholder="Enter specific aspects you want analyzed (e.g., 'Focus on hook techniques and trending sounds')"
+                  style={{ 
+                    width: '100%', 
+                    maxWidth: '500px',
+                    padding: '8px',
+                    border: '1px solid black',
+                    fontSize: '14px',
+                    minHeight: '80px',
+                    resize: 'vertical',
+                    fontFamily: 'inherit'
+                  }}
+                />
+                <small style={{ 
+                  color: '#666', 
+                  fontSize: '12px', 
+                  marginTop: '5px', 
+                  display: 'block' 
+                }}>
+                  Leave blank for standard analysis. Be specific about what insights you want.
+                </small>
               </p>
               <p>
                 <button
