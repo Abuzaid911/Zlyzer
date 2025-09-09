@@ -1,4 +1,5 @@
 import { useAuth } from './contexts/AuthContext'
+import Dashboard from './components/Dashboard'
 
 export default function App() {
   const { user, loading, signInWithGoogle } = useAuth()
@@ -19,22 +20,9 @@ export default function App() {
     )
   }
 
-  // --- Signed-in Minimal Acknowledgement ----------------------------------
+  // --- Signed-in - Show Dashboard ----------------------------------
   if (user) {
-    return (
-      <div style={styles.shell}>
-        <div style={styles.centerCol}>
-          <div style={styles.logoRow}>
-            <div style={styles.logoDot} />
-            <span style={styles.brand}>ZLYZER</span>
-          </div>
-          <h1 style={styles.h1}>Welcome</h1>
-          <p style={styles.subtitle}>You are signed in as <strong>{user.email || 'creator'}</strong>.</p>
-          <p style={styles.muted}>You can now close this window or continue to the app.</p>
-        </div>
-        <style>{baseAnimations}</style>
-      </div>
-    )
+    return <Dashboard />
   }
 
   // --- Login-Only Screen ---------------------------------------------------
