@@ -1,122 +1,443 @@
-import { useAuth } from './contexts/AuthContext'
-import Dashboard from './components/Dashboard'
+import React, { useState, useEffect } from 'react'
+import { useAuth } from '../contexts/AuthContext'
+import { apiService } from '../services/api'
 
-export default function App() {
-  const { user, loading, signInWithGoogle } = useAuth()
+interface DashboardData {
+  numReqs: number
+  videoAnalysisFreeQuota: number
+  videoAnalysisPaidQuota: number
+  reqs: Array<{
+    id: string
+    userId: string
+    type: string
+    url: string
+    status: string
+    videoResultId: string | null
+    errorMessage: string | null
+    processingTimeMs: number
+    createdAt: string | null
+    updatedAt: string | null
+    startedAt: string | null
+    completedAt: string | null
+    result?: {
+      analysisResult: string
+      processingTime: number
+    }
+  }>
+}
 
-  if (loading) {
-    return (
-      <div className="min-h-screen grid place-items-center bg-gradient-to-br from-[#0B0B1E] via-[#0D0D26] to-[#111133] text-white">
-        <div className="flex items-center gap-3 text-slate-300">
-          <span className="loader" aria-hidden />
-          <span className="sr-only">Loading…</span>
-          <span>Preparing your session…</span>
-        </div>
-        <style jsx>{`
-          .loader { width: 18px; height: 18px; border-radius: 9999px; border: 3px solid rgba(167,139,250,.25); border-top-color: #A78BFA; animation: spin 0.9s linear infinite; }
-          @keyframes spin { to { transform: rotate(360deg); } }
-        `}</style>
-      </div>
-    )
+// ---------------------------
+// Helpers & UI utilities
+// ---------------------------
+const tokens = {
+  bg: '#0B0F1A',
+  surface: 'rgba(255,255,255,0.04)',
+  border: 'rgba(255,255,255,0.08)',
+  text: '#E6E8F2',
+  subtext: '#9CA3AF',
+  brand: '#A78BFA',
+  brand2: '#7C3AED',
+  good: '#22C55E',
+  warn: '#F59E0B',
+  bad: '#EF4444',
+}
+
+const cardStyle: React.CSSProperties = {
+  background: tokens.surface,
+  border: `1px solid ${tokens.border}`,
+  borderRadius: 16,
+  padding: 20,
+  backdropFilter: 'blur(12px)'
+}
+
+const pill = (bg: string, color = '#fff'): React.CSSProperties => ({
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 8,
+  padding: '6px 10px',
+  fontSize: 12,
+  borderRadius: 999,
+  background: bg,
+  color,
+  border: '1px solid rgba(255,255,255,0.08)'
+})
+
+const btn: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 8,
+  padding: '12px 16px',
+  borderRadius: 12,
+  border: `1px solid ${tokens.border}`,
+  background: '#111827',
+  color: tokens.text,
+  cursor: 'pointer',
+  fontWeight: 600,
+  transition: 'transform .15s ease, box-shadow .2s ease'
+}
+
+const btnPrimary: React.CSSProperties = {
+  ...btn,
+  background: `linear-gradient(135deg, ${tokens.brand} 0%, ${tokens.brand2} 100%)`,
+  border: '1px solid rgba(255,255,255,0.14)',
+  color: '#fff',
+  boxShadow: '0 10px 30px rgba(124,58,237,.35)'
+}
+
+const inputBase: React.CSSProperties = {
+  width: '100%',
+  padding: '12px 14px',
+  background: '#0F172A',
+  border: `1px solid ${tokens.border}`,
+  borderRadius: 12,
+  color: tokens.text,
+  outline: 'none',
+  fontSize: 14
+}
+
+// Existing formatter kept (with brand colors) -------------------------------
+const formatAnalysisToHtml = (text: string): string => {
+  const lines = text.split('\n')
+  let html = ''
+  let inList = false
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim()
+    if (!line) {
+      if (inList) { html += '</ul>'; inList = false }
+      html += '<div style="margin:12px 0;"></div>'
+      continue
+    }
+    if (/^([🔍🎬🗣️🎧🎨🎯👥🧠])\s*(\d+\.\s*.+)$/.test(line)) {
+      if (inList) { html += '</ul>'; inList = false }
+      const match = line.match(/^([🔍🎬🗣️🎧🎨🎯👥🧠])\s*(\d+\.\s*.+)$/)
+      if (match) {
+        html += `<h3 style="color:#E6E8F2;margin:22px 0 10px 0;padding-bottom:8px;border-bottom:1px solid ${tokens.border};font-size:18px;">${match[1]} ${match[2]}</h3>`
+      }
+      continue
+    }
+    if (/^\s*[\*\-\•]\s*/.test(line)) {
+      if (!inList) { html += '<ul style="margin:8px 0;padding-left:22px;list-style:disc;">'; inList = true }
+      let listContent = line.replace(/^\s*[\*\-\•]\s*/, '')
+      listContent = listContent.replace(/\*\*(.+?)\*\*/g, '<strong style="color:#C4B5FD;">$1</strong>')
+      listContent = listContent.replace(/\((\d+:\d+(?:-\d+:\d+)?)\)/g, '<span style="background:#1E293B;padding:2px 6px;border-radius:6px;font-weight:700;color:#93C5FD;font-size:12px;">$1</span>')
+      html += `<li style="margin:6px 0;line-height:1.6;">${listContent}</li>`
+      continue
+    }
+    if (inList) { html += '</ul>'; inList = false }
+    let paragraph = line
+    paragraph = paragraph.replace(/\*\*(.+?)\*\*/g, '<strong style="color:#E6E8F2;">$1</strong>')
+    paragraph = paragraph.replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    paragraph = paragraph.replace(/\((\d+:\d+(?:-\d+:\d+)?)\)/g, '<span style="background:#1E293B;padding:2px 6px;border-radius:6px;font-weight:700;color:#93C5FD;font-size:12px;">$1</span>')
+    html += `<p style="margin:8px 0;line-height:1.8;color:#CBD5E1;">${paragraph}</p>`
+  }
+  if (inList) html += '</ul>'
+  return html
+}
+
+const Skeleton = ({ height = 16 }: { height?: number }) => (
+  <div style={{
+    height,
+    width: '100%',
+    borderRadius: 8,
+    background: 'linear-gradient(90deg, rgba(255,255,255,0.06) 25%, rgba(255,255,255,0.12) 37%, rgba(255,255,255,0.06) 63%)',
+    backgroundSize: '400% 100%',
+    animation: 'shine 1.2s ease-in-out infinite'
+  }} />
+)
+
+const Badge = ({ status }: { status: string }) => {
+  const map: Record<string, { bg: string; label: string }> = {
+    COMPLETED: { bg: tokens.good, label: 'Completed' },
+    FAILED: { bg: tokens.bad, label: 'Failed' },
+    QUEUED: { bg: tokens.warn, label: 'Queued' },
+    PROCESSING: { bg: '#3B82F6', label: 'Processing' }
+  }
+  const item = map[status] || { bg: '#6B7280', label: status }
+  return <span style={pill(item.bg)}>{item.label}</span>
+}
+
+const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
+  <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 12, alignItems: 'center' }}>
+    <span style={{ color: tokens.subtext, fontSize: 12 }}>{label}</span>
+    <div>{value}</div>
+  </div>
+)
+
+// ---------------------------
+// Main Component
+// ---------------------------
+const Dashboard: React.FC = () => {
+  const { user, signOut, getAccessToken } = useAuth()
+  const [videoUrl, setVideoUrl] = useState('')
+  const [customPrompt, setCustomPrompt] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [currentAnalysis, setCurrentAnalysis] = useState<string | null>(null)
+  const [statusMessage, setStatusMessage] = useState<string>('')
+  const [isPolling, setIsPolling] = useState(false)
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
+  const [dashboardLoading, setDashboardLoading] = useState(true)
+  const [dashboardError, setDashboardError] = useState<string | null>(null)
+  const [urlTransformed, setUrlTransformed] = useState(false)
+
+  useEffect(() => {
+    const token = getAccessToken()
+    apiService.setToken(token)
+    if (token && user) {
+      registerUserWithBackend(token)
+      fetchDashboardData()
+    }
+  }, [user, getAccessToken])
+
+  const registerUserWithBackend = async (token: string) => {
+    try { await apiService.signUpUser(token) } catch {}
   }
 
-  if (user) return <Dashboard />
+  const fetchDashboardData = async () => {
+    try {
+      setDashboardLoading(true)
+      setDashboardError(null)
+      const data = await apiService.getDashboardData()
+      setDashboardData(data)
+    } catch (error) {
+      setDashboardError('Unable to load usage statistics')
+    } finally {
+      setDashboardLoading(false)
+    }
+  }
 
+  const transformTikTokUrl = async (url: string): Promise<string> => {
+    if (url.includes('vm.tiktok.com') || url.includes('vt.tiktok.com')) {
+      try {
+        setStatusMessage('Resolving TikTok URL…')
+        const response = await fetch('/api/resolve-url', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) })
+        if (response.ok) {
+          const data = await response.json()
+          if (data.resolvedUrl && data.resolvedUrl !== url) {
+            setStatusMessage('')
+            setUrlTransformed(true)
+            return data.resolvedUrl
+          }
+        }
+        setStatusMessage('')
+      } catch {}
+    }
+    return url
+  }
+
+  const handleAnalyzeVideo = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!videoUrl.trim()) return
+    setLoading(true)
+    setStatusMessage('Submitting analysis request…')
+    setCurrentAnalysis(null)
+    try {
+      const transformedUrl = await transformTikTokUrl(videoUrl)
+      if (transformedUrl !== videoUrl) { setVideoUrl(transformedUrl) } else { setUrlTransformed(false) }
+      const data = await apiService.submitAnalysisRequest(transformedUrl, customPrompt)
+      if (data.status === 'cached') {
+        setStatusMessage('Analysis found in cache!')
+        setCurrentAnalysis(data.resultAnalysis || '')
+        fetchDashboardData()
+      } else {
+        setStatusMessage(`Analysis queued. Position: ${data.queuePosition || 'N/A'}`)
+        const requestId = data.jobId
+        pollAnalysisStatus(requestId)
+      }
+      setVideoUrl('')
+      setCustomPrompt('')
+      setUrlTransformed(false)
+    } catch (error) {
+      setStatusMessage('Unable to submit analysis request. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const pollAnalysisStatus = async (requestId: string) => {
+    const maxAttempts = 30
+    let attempts = 0
+    setIsPolling(true)
+    const poll = async () => {
+      try {
+        setStatusMessage(`Checking analysis status… (${attempts + 1}/${maxAttempts})`)
+        const data = await apiService.getAnalysisStatus(requestId)
+        if (data.status === 'COMPLETED' && data.result) {
+          setStatusMessage('Analysis completed!')
+          setCurrentAnalysis(data.result.analysisResult)
+          setIsPolling(false)
+          fetchDashboardData()
+          return
+        } else if (data.status === 'FAILED') {
+          setStatusMessage(`Analysis failed: ${data.errorMessage || 'Unknown error'}`)
+          setIsPolling(false)
+          return
+        } else {
+          setStatusMessage(`Analysis ${data.status.toLowerCase()}… (${attempts + 1}/${maxAttempts})`)
+        }
+        attempts++
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 1000)
+        } else {
+          setStatusMessage('Analysis is taking longer than expected. Please check back later.')
+          setIsPolling(false)
+        }
+      } catch (error) {
+        setStatusMessage('Error checking analysis status. Please refresh to see results.')
+        setIsPolling(false)
+      }
+    }
+    poll()
+  }
+
+  const handleSignOut = async () => { try { await signOut() } catch {} }
+
+  // ---------------------------
+  // UI
+  // ---------------------------
   return (
-    <div className="min-h-screen bg-[radial-gradient(1200px_800px_at_10%_10%,rgba(167,139,250,.15),transparent),radial-gradient(900px_600px_at_90%_90%,rgba(99,102,241,.12),transparent)] bg-[#0B0B1E] text-white">
-      {/* Top nav */}
-      <header className="fixed inset-x-0 top-0 z-50">
-        <div className="mx-auto max-w-7xl px-4">
-          <div className="mt-6 flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 backdrop-blur supports-[backdrop-filter]:bg-white/5 p-3">
-            <div className="flex items-center gap-2">
-              <Logo />
-              <span className="bg-gradient-to-r from-white to-violet-300 bg-clip-text text-transparent font-semibold tracking-tight">Zlyzer</span>
-            </div>
-            <a href="#privacy" className="text-xs text-slate-300 hover:text-violet-300 transition">Privacy</a>
+    <div style={{ minHeight: '100vh', background: `radial-gradient(1200px 800px at 80% -10%, rgba(124,58,237,0.18), transparent 60%), ${tokens.bg}` , color: tokens.text }}>
+      {/* Header */}
+      <header style={{ position: 'sticky', top: 0, zIndex: 50, backdropFilter: 'blur(10px)', background: 'rgba(11,15,26,0.8)', borderBottom: `1px solid ${tokens.border}` }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 10, height: 10, borderRadius: 999, background: `linear-gradient(135deg, ${tokens.brand}, ${tokens.brand2})`, boxShadow: '0 0 18px rgba(124,58,237,.6)' }} />
+            <strong style={{ letterSpacing: '.12em', color: tokens.brand }}>ZLYZER</strong>
+            <span style={{ color: tokens.subtext, fontSize: 12, marginLeft: 10 }}>Dashboard</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <span style={{ fontSize: 12, color: tokens.subtext }}>Signed in as <strong style={{ color: tokens.text }}>{user?.user_metadata?.full_name || user?.email}</strong></span>
+            <button style={btn} onClick={handleSignOut} onMouseEnter={e=>e.currentTarget.style.transform='translateY(-1px)'} onMouseLeave={e=>e.currentTarget.style.transform='translateY(0)'}>Sign out</button>
           </div>
         </div>
       </header>
 
-      {/* Auth card */}
-      <main className="mx-auto grid min-h-screen max-w-7xl place-items-center px-4">
-        <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-8 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-white/[0.04]">
-          {/* Accent halo */}
-          <div aria-hidden className="pointer-events-none absolute -top-32 -right-32 h-64 w-64 rounded-full bg-violet-500/30 blur-3xl" />
-
-          <div className="mb-6 flex items-center gap-3">
-            <div className="rounded-xl bg-violet-500/20 p-2 ring-1 ring-inset ring-violet-300/30">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <path d="M12 3v18M3 12h18" stroke="currentColor" className="text-violet-300" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
+      <main style={{ maxWidth: 1100, margin: '0 auto', padding: 20, display: 'grid', gridTemplateColumns: '1.2fr .8fr', gap: 20 }}>
+        {/* Left column */}
+        <div style={{ display: 'grid', gap: 20 }}>
+          {/* Analyze */}
+          <section style={cardStyle}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={pill('rgba(167,139,250,0.18)')}>🎬 Analyze TikTok</span>
+                {urlTransformed && <span style={pill('#0B7A4B')}>✅ URL expanded</span>}
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-semibold tracking-tight">Sign in to Zlyzer</h1>
-              <p className="text-sm text-slate-300">One click to your analytics workspace</p>
-            </div>
-          </div>
+            <form onSubmit={handleAnalyzeVideo} style={{ display: 'grid', gap: 12 }}>
+              <label style={{ fontSize: 12, color: tokens.subtext }}>TikTok Video URL</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10 }}>
+                <input type="url" value={videoUrl} onChange={(e)=>{ setVideoUrl(e.target.value); setUrlTransformed(false) }} placeholder="https://www.tiktok.com/@username/video/..." required style={inputBase} />
+                <button type="submit" disabled={loading} style={{ ...btnPrimary, minWidth: 160 }} onMouseEnter={e=>e.currentTarget.style.transform='translateY(-1px)'} onMouseLeave={e=>e.currentTarget.style.transform='translateY(0)'}>
+                  {loading ? 'Analyzing…' : 'Analyze'}
+                </button>
+              </div>
 
-          <button
-            onClick={signInWithGoogle}
-            className="group inline-flex w-full items-center justify-center gap-3 rounded-xl border border-white/15 bg-white text-slate-900 px-5 py-3 font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 active:scale-[.99] hover:shadow-lg"
-            aria-label="Continue with Google"
-          >
-            <GoogleIcon className="h-5 w-5" />
-            Continue with Google
-            <span aria-hidden className="ml-auto opacity-0 transition group-hover:opacity-100">→</span>
-          </button>
+              <label style={{ fontSize: 12, color: tokens.subtext, marginTop: 6 }}>Custom Analysis Prompt (optional)</label>
+              <textarea value={customPrompt} onChange={(e)=>setCustomPrompt(e.target.value)} placeholder="e.g., Focus on hook effectiveness, retention dips, trending sounds" style={{ ...inputBase, minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }} />
+              <span style={{ fontSize: 12, color: tokens.subtext }}>Tip: Be specific. Example: <em>“Compare this to top 5 competitors and highlight missed trends.”</em></span>
+            </form>
 
-          {/* Divider */}
-          <div className="my-6 flex items-center gap-3 text-xs text-slate-400">
-            <div className="h-px flex-1 bg-white/10" /><span>or</span><div className="h-px flex-1 bg-white/10" />
-          </div>
+            {/* Inline status */}
+            {statusMessage && (
+              <div style={{ marginTop: 14, ...cardStyle, background: 'rgba(30,41,59,0.5)' }}>
+                <strong style={{ display: 'block', marginBottom: 6 }}>Status</strong>
+                <span style={{ color: tokens.subtext }}>{statusMessage}</span>
+                {(loading || isPolling) && <div style={{ marginTop: 10 }}><Skeleton height={8} /></div>}
+              </div>
+            )}
+          </section>
 
-          {/* Future expansion (email/password). Keep it disabled visually to emphasize google for now) */}
-          <fieldset disabled className="grid gap-3 opacity-60">
-            <label className="grid gap-1">
-              <span className="text-xs text-slate-300">Email</span>
-              <input type="email" placeholder="name@company.com" className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm placeholder-slate-400 outline-none focus:ring-2 focus:ring-violet-400" />
-            </label>
-            <label className="grid gap-1">
-              <span className="text-xs text-slate-300">Password</span>
-              <input type="password" placeholder="••••••••" className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm placeholder-slate-400 outline-none focus:ring-2 focus:ring-violet-400" />
-            </label>
-            <button className="rounded-lg bg-violet-500/80 px-4 py-2 text-sm font-medium text-white/90">Continue</button>
-          </fieldset>
-
-          {/* Footnote */}
-          <p id="privacy" className="mt-6 text-[11px] leading-5 text-slate-400">
-            By continuing, you agree to our <a className="underline decoration-white/20 underline-offset-2 hover:text-violet-300" href="#terms">Terms</a> and <a className="underline decoration-white/20 underline-offset-2 hover:text-violet-300" href="#privacy">Privacy Policy</a>.
-          </p>
+          {/* Analysis results */}
+          {currentAnalysis && (
+            <section style={{ ...cardStyle, padding: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottom: `1px solid ${tokens.border}` }}>
+                <h3 style={{ margin: 0 }}>Analysis Results</h3>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button
+                    title="Copy analysis"
+                    style={btn}
+                    onClick={() => navigator.clipboard.writeText(currentAnalysis)}
+                    onMouseEnter={e=>e.currentTarget.style.transform='translateY(-1px)'}
+                    onMouseLeave={e=>e.currentTarget.style.transform='translateY(0)'}
+                  >📋 Copy</button>
+                </div>
+              </div>
+              <div style={{ padding: 18, maxHeight: 520, overflowY: 'auto' }}>
+                <div dangerouslySetInnerHTML={{ __html: formatAnalysisToHtml(currentAnalysis) }} />
+              </div>
+            </section>
+          )}
         </div>
 
-        {/* Subtle bottom notes */}
-        <div className="mt-10 text-center text-xs text-slate-400">
-          <p>© {new Date().getFullYear()} Zlyzer. All rights reserved.</p>
+        {/* Right column */}
+        <div style={{ display: 'grid', gap: 20 }}>
+          {/* Usage stats */}
+          <section style={cardStyle}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <h3 style={{ margin: 0 }}>Usage</h3>
+              <button style={{ ...btn, fontSize: 12 }} onClick={fetchDashboardData}>↻ Refresh</button>
+            </div>
+            {dashboardLoading ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
+                <Skeleton height={54} /><Skeleton height={54} /><Skeleton height={54} />
+              </div>
+            ) : dashboardError ? (
+              <p style={{ color: tokens.subtext }}>{dashboardError}</p>
+            ) : dashboardData ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
+                {[{label:'Total Requests', value: dashboardData.numReqs},{label:'Free Quota', value: dashboardData.videoAnalysisFreeQuota},{label:'Paid Quota', value: dashboardData.videoAnalysisPaidQuota}].map((s, i)=> (
+                  <div key={i} style={{ ...cardStyle, padding: 14, textAlign: 'center' }}>
+                    <div style={{ fontSize: 22, fontWeight: 700 }}>{s.value}</div>
+                    <div style={{ fontSize: 12, color: tokens.subtext }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ color: tokens.subtext }}>No data available</p>
+            )}
+          </section>
+
+          {/* Recent requests */}
+          <section style={{ ...cardStyle, maxHeight: 480, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <h3 style={{ margin: 0 }}>Recent Analyses</h3>
+            </div>
+            <div style={{ overflowY: 'auto', paddingRight: 6 }}>
+              {dashboardData && dashboardData.reqs.length > 0 ? (
+                dashboardData.reqs.map((req) => (
+                  <div key={req.id} style={{ ...cardStyle, padding: 14, marginBottom: 10, background: 'rgba(255,255,255,0.03)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                      <div style={{ flex: 1 }}>
+                        <Row label="URL" value={<a href={req.url} target="_blank" rel="noreferrer" style={{ color: '#93C5FD', textDecoration: 'none' }}>{req.url}</a>} />
+                        <Row label="Status" value={<Badge status={req.status} />} />
+                        <Row label="Processing" value={<span>{req.processingTimeMs} ms</span>} />
+                        {req.createdAt && <Row label="Created" value={<span>{new Date(req.createdAt).toLocaleString()}</span>} />}
+                        {req.errorMessage && req.status==='FAILED' && (
+                          <Row label="Error" value={<span style={{ color: tokens.bad }}>{req.errorMessage}</span>} />
+                        )}
+                      </div>
+                      <div style={{ display: 'grid', gap: 8, alignContent: 'start' }}>
+                        <button style={btn} onClick={() => navigator.clipboard.writeText(req.url)}>Copy URL</button>
+                        {req.videoResultId && <a style={{ ...btn, textDecoration: 'none' }} href={`#/analysis/${req.videoResultId}`}>Open</a>}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div style={{ ...cardStyle, textAlign: 'center' }}>
+                  <p style={{ color: tokens.subtext, margin: 0 }}>No requests yet. Run your first analysis above.</p>
+                </div>
+              )}
+            </div>
+          </section>
         </div>
       </main>
+
+      <style>{`
+        @keyframes shine { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+      `}</style>
     </div>
   )
 }
 
-function Logo() {
-  return (
-    <div className="flex items-center gap-2">
-      <div aria-hidden className="grid h-6 w-6 place-items-center rounded-md bg-gradient-to-br from-violet-500 to-indigo-500 shadow-lg">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-          <path d="M4 12h10l-4 6h10" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      </div>
-    </div>
-  )
-}
-
-function GoogleIcon(props) {
-  return (
-    <svg viewBox="0 0 533.5 544.3" aria-hidden {...props}>
-      <path d="M533.5 278.4c0-18.5-1.7-37-5.2-54.8H272.1v103.8h146.9c-6.3 34.8-25.4 64.3-54.3 84.1v69.7h87.7c51.4-47.3 81.1-117.1 81.1-202.8z" fill="#4285F4"/>
-      <path d="M272.1 544.3c73.3 0 134.9-24.2 179.8-65.8l-87.7-69.7c-24.4 16.4-55.7 26.1-92 26.1-70.7 0-130.6-47.6-152-111.6H29.8v70.2c44.3 87.9 135.8 150.8 242.3 150.8z" fill="#34A853"/>
-      <path d="M120.1 323.3c-10.7-31.9-10.7-66.5 0-98.4V154.6H29.8c-42.4 84.9-42.4 185.9 0 270.8l90.3-70.2z" fill="#FBBC05"/>
-      <path d="M272.1 107.7c39.9-.6 78.3 14.9 107.5 43.6l80.1-80.1C406.5 24.1 342.6-.5 272.1 0 165.6 0 74.1 62.9 29.8 150.8l90.3 70.2c21.3-64 81.3-113.3 152-113.3z" fill="#EA4335"/>
-    </svg>
-  )
-}
+export default Dashboard
