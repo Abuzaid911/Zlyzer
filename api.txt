@@ -66,8 +66,29 @@ curl https://zanalyzer.fly.dev/api/analysis-requests/ \
   --header 'user-agent: ' \
   --header 'Content-Type: application/json' \
   --data '{
-  "videoUrl": ""
+  "videoUrl": "",
+  "customPrompt": ""
 }'
+
+Headers
+authorization to authorization
+Type:string
+required
+x-session-id to x-session-id
+Type:string
+user-agent to user-agent
+Type:string
+
+Body
+required
+Selected Content Type:
+application/json
+videoUrl to videoUrl
+Type:string
+Format:uri
+required
+customPrompt to customPrompt
+Type:string
 
 {
   "message": "string",
