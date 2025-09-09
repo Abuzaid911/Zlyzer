@@ -1,548 +1,122 @@
-import React, { useState, useEffect } from 'react'
-import { useAuth } from '../contexts/AuthContext'
-import { apiService } from '../services/api'
+import { useAuth } from './contexts/AuthContext'
+import Dashboard from './components/Dashboard'
 
-interface DashboardData {
-  numReqs: number
-  videoAnalysisFreeQuota: number
-  videoAnalysisPaidQuota: number
-  reqs: Array<{
-    id: string
-    userId: string
-    type: string
-    url: string
-    status: string
-    videoResultId: string | null
-    errorMessage: string | null
-    processingTimeMs: number
-    createdAt: string | null
-    updatedAt: string | null
-    startedAt: string | null
-    completedAt: string | null
-    result?: {
-      analysisResult: string
-      processingTime: number
-    }
-  }>
-}
+export default function App() {
+  const { user, loading, signInWithGoogle } = useAuth()
 
-const formatAnalysisToHtml = (text: string): string => {
-  const lines = text.split('\n')
-  let html = ''
-  let inList = false
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim()
-
-    if (!line) {
-      if (inList) {
-        html += '</ul>'
-        inList = false
-      }
-      html += '<div style="margin: 10px 0;"></div>'
-      continue
-    }
-
-    if (/^([🔍🎬🗣️🎧🎨🎯👥🧠])\s*(\d+\.\s*.+)$/.test(line)) {
-      if (inList) {
-        html += '</ul>'
-        inList = false
-      }
-      const match = line.match(/^([🔍🎬🗣️🎧🎨🎯👥🧠])\s*(\d+\.\s*.+)$/)
-      if (match) {
-        html += `<h3 style="color:#e5e7eb;margin:24px 0 12px;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:8px;font-size:18px;">${match[1]} ${match[2]}</h3>`
-      }
-      continue
-    }
-
-    if (/^\s*[\*\-\•]\s*/.test(line)) {
-      if (!inList) {
-        html += '<ul style="margin:8px 0 8px 8px;padding-left:20px;list-style:disc;">'
-        inList = true
-      }
-      let listContent = line.replace(/^\s*[\*\-\•]\s*/, '')
-      listContent = listContent.replace(/\*\*(.+?)\*\*/g, '<strong style="color:#a78bfa;">$1<\/strong>')
-      listContent = listContent.replace(/\((\d+:\d+(?:-\d+:\d+)?)\)/g, '<span style="background:#1f2937;padding:2px 6px;border-radius:4px;font-weight:600;color:#93c5fd;font-size:12px;">$1<\/span>')
-      html += `<li style="margin:6px 0;line-height:1.6;">${listContent}</li>`
-      continue
-    }
-
-    if (inList) {
-      html += '</ul>'
-      inList = false
-    }
-
-    let paragraph = line
-    paragraph = paragraph.replace(/\*\*(.+?)\*\*/g, '<strong style="color:#e5e7eb;">$1<\/strong>')
-    paragraph = paragraph.replace(/\*([^*]+)\*/g, '<em>$1<\/em>')
-    paragraph = paragraph.replace(/\((\d+:\d+(?:-\d+:\d+)?)\)/g, '<span style="background:#1f2937;padding:2px 6px;border-radius:4px;font-weight:600;color:#93c5fd;font-size:12px;">$1<\/span>')
-    html += `<p style="margin:8px 0;line-height:1.7;color:#d1d5db;">${paragraph}</p>`
-  }
-
-  if (inList) html += '</ul>'
-  return html
-}
-
-const Badge = ({ color = '#22c55e', children }: { color?: string; children: React.ReactNode }) => (
-  <span style={{
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 6,
-    padding: '4px 10px',
-    borderRadius: 999,
-    fontSize: 12,
-    fontWeight: 600,
-    background: 'rgba(255,255,255,0.06)',
-    border: '1px solid rgba(255,255,255,0.08)',
-    color
-  }}>{children}</span>
-)
-
-const StatCard = ({ label, value }: { label: string; value: string | number }) => (
-  <div style={styles.statCard}>
-    <div style={{ fontSize: 12, color: '#9CA3AF' }}>{label}</div>
-    <div style={{ fontSize: 24, fontWeight: 700, color: '#E5E7EB' }}>{value}</div>
-  </div>
-)
-
-const Progress = ({ value, max, label }: { value: number; max: number; label: string }) => {
-  const pct = Math.max(0, Math.min(100, Math.round((value / Math.max(1, max)) * 100)))
-  return (
-    <div style={{ display: 'grid', gap: 6 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#9CA3AF', fontSize: 12 }}>
-        <span>{label}</span><span>{value}/{max}</span>
-      </div>
-      <div style={{ height: 10, background: 'rgba(255,255,255,0.06)', borderRadius: 20, overflow: 'hidden' }}>
-        <div style={{ width: pct + '%', height: '100%', background: 'linear-gradient(90deg,#8B5CF6,#06b6d4)' }} />
-      </div>
-    </div>
-  )
-}
-
-const Dashboard: React.FC = () => {
-  const { user, signOut, getAccessToken } = useAuth()
-  const [videoUrl, setVideoUrl] = useState('')
-  const [customPrompt, setCustomPrompt] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [currentAnalysis, setCurrentAnalysis] = useState<string | null>(null)
-  const [statusMessage, setStatusMessage] = useState<string>('')
-  const [isPolling, setIsPolling] = useState(false)
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
-  const [dashboardLoading, setDashboardLoading] = useState(true)
-  const [dashboardError, setDashboardError] = useState<string | null>(null)
-  const [urlTransformed, setUrlTransformed] = useState(false)
-
-  useEffect(() => {
-    const token = getAccessToken()
-    apiService.setToken(token)
-    if (token && user) {
-      registerUserWithBackend(token)
-      fetchDashboardData()
-    }
-  }, [user, getAccessToken])
-
-  const registerUserWithBackend = async (token: string) => {
-    try { await apiService.signUpUser(token) } catch { /* non-blocking */ }
-  }
-
-  const fetchDashboardData = async () => {
-    try {
-      setDashboardLoading(true)
-      setDashboardError(null)
-      const data = await apiService.getDashboardData()
-      setDashboardData(data)
-    } catch {
-      setDashboardError('Unable to load usage statistics')
-    } finally {
-      setDashboardLoading(false)
-    }
-  }
-
-  const transformTikTokUrl = async (url: string): Promise<string> => {
-    if (url.includes('vm.tiktok.com') || url.includes('vt.tiktok.com')) {
-      try {
-        setStatusMessage('Resolving TikTok URL…')
-        const response = await fetch('/api/resolve-url', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url })
-        })
-        if (response.ok) {
-          const data = await response.json()
-          if (data.resolvedUrl && data.resolvedUrl !== url) {
-            setStatusMessage('')
-            setUrlTransformed(true)
-            return data.resolvedUrl
-          }
-        }
-        setStatusMessage('')
-      } catch { setStatusMessage('') }
-    }
-    return url
-  }
-
-  const handleAnalyzeVideo = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!videoUrl.trim()) return
-
-    setLoading(true)
-    setStatusMessage('Submitting analysis request…')
-    setCurrentAnalysis(null)
-
-    try {
-      const transformedUrl = await transformTikTokUrl(videoUrl)
-      if (transformedUrl !== videoUrl) { setVideoUrl(transformedUrl) } else { setUrlTransformed(false) }
-
-      const data = await apiService.submitAnalysisRequest(transformedUrl, customPrompt)
-
-      if (data.status === 'cached') {
-        setStatusMessage('Analysis found in cache!')
-        setCurrentAnalysis(data.resultAnalysis || '')
-        fetchDashboardData()
-      } else {
-        setStatusMessage(`Analysis queued. Position: ${data.queuePosition || 'N/A'} — ETA: ${data.estimatedWait || 'calculating…'}`)
-        const requestId = data.jobId
-        pollAnalysisStatus(requestId)
-      }
-      setVideoUrl('')
-      setCustomPrompt('')
-      setUrlTransformed(false)
-    } catch {
-      setStatusMessage('Unable to submit analysis request. Please try again.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const pollAnalysisStatus = async (requestId: string) => {
-    const maxAttempts = 60 // 5 minutes at 5s per poll
-    let attempts = 0
-    setIsPolling(true)
-
-    const poll = async () => {
-      try {
-        setStatusMessage(`Checking analysis status… (${attempts + 1}/${maxAttempts})`)
-        const data = await apiService.getAnalysisStatus(requestId)
-
-        if (data.status === 'COMPLETED' && data.result) {
-          setStatusMessage('Analysis completed!')
-          setCurrentAnalysis(data.result.analysisResult)
-          setIsPolling(false)
-          fetchDashboardData()
-          return
-        } else if (data.status === 'FAILED') {
-          setStatusMessage(`Analysis failed: ${data.errorMessage || 'Unknown error'}`)
-          setIsPolling(false)
-          return
-        } else {
-          setStatusMessage(`Analysis ${String(data.status).toLowerCase()}… (${attempts + 1}/${maxAttempts})`)
-        }
-
-        attempts++
-        if (attempts < maxAttempts) {
-          setTimeout(poll, 5000) // Poll every 5 seconds
-        } else {
-          setStatusMessage('Analysis is taking longer than expected. Please check back later.')
-          setIsPolling(false)
-        }
-      } catch {
-        setStatusMessage('Error checking analysis status. Please refresh to see results.')
-        setIsPolling(false)
-      }
-    }
-
-    poll()
-  }
-
-  const handleSignOut = async () => { try { await signOut() } catch { /* noop */ } }
-
-  return (
-    <div style={styles.appShell}>
-      {/* Header */}
-      <header style={styles.header}>
-        <div style={styles.brandRow}>
-          <div style={styles.logoDot} />
-          <strong style={styles.brandText}>ZLYZER</strong>
-          <Badge color="#a78bfa">Dashboard</Badge>
+  if (loading) {
+    return (
+      <div className="min-h-screen grid place-items-center bg-gradient-to-br from-[#0B0B1E] via-[#0D0D26] to-[#111133] text-white">
+        <div className="flex items-center gap-3 text-slate-300">
+          <span className="loader" aria-hidden />
+          <span className="sr-only">Loading…</span>
+          <span>Preparing your session…</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ color: '#9CA3AF', fontSize: 14 }}>Welcome, <strong style={{ color: '#E5E7EB' }}>{user?.user_metadata?.full_name || user?.email}</strong></span>
-          <button onClick={handleSignOut} style={styles.ghostBtn}>Sign Out</button>
+        <style jsx>{`
+          .loader { width: 18px; height: 18px; border-radius: 9999px; border: 3px solid rgba(167,139,250,.25); border-top-color: #A78BFA; animation: spin 0.9s linear infinite; }
+          @keyframes spin { to { transform: rotate(360deg); } }
+        `}</style>
+      </div>
+    )
+  }
+
+  if (user) return <Dashboard />
+
+  return (
+    <div className="min-h-screen bg-[radial-gradient(1200px_800px_at_10%_10%,rgba(167,139,250,.15),transparent),radial-gradient(900px_600px_at_90%_90%,rgba(99,102,241,.12),transparent)] bg-[#0B0B1E] text-white">
+      {/* Top nav */}
+      <header className="fixed inset-x-0 top-0 z-50">
+        <div className="mx-auto max-w-7xl px-4">
+          <div className="mt-6 flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 backdrop-blur supports-[backdrop-filter]:bg-white/5 p-3">
+            <div className="flex items-center gap-2">
+              <Logo />
+              <span className="bg-gradient-to-r from-white to-violet-300 bg-clip-text text-transparent font-semibold tracking-tight">Zlyzer</span>
+            </div>
+            <a href="#privacy" className="text-xs text-slate-300 hover:text-violet-300 transition">Privacy</a>
+          </div>
         </div>
       </header>
 
-      <main style={styles.main}>
-        {/* Analyze Card */}
-        <section style={styles.card}>
-          <div style={styles.cardHeader}>
-            <h2 style={styles.cardTitle}>Analyze TikTok Video</h2>
-            <Badge color="#60a5fa">AI Analysis</Badge>
-          </div>
-          <form onSubmit={handleAnalyzeVideo} style={{ display: 'grid', gap: 14 }}>
-            <label style={styles.label}>TikTok Video URL</label>
-            <input
-              type="url"
-              value={videoUrl}
-              onChange={(e) => { setVideoUrl(e.target.value); setUrlTransformed(false) }}
-              placeholder="https://www.tiktok.com/@username/video/..."
-              required
-              style={styles.input}
-            />
-            {urlTransformed && (
-              <small style={{ color: '#10b981' }}>✅ Short URL resolved to full TikTok link</small>
-            )}
+      {/* Auth card */}
+      <main className="mx-auto grid min-h-screen max-w-7xl place-items-center px-4">
+        <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-8 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-white/[0.04]">
+          {/* Accent halo */}
+          <div aria-hidden className="pointer-events-none absolute -top-32 -right-32 h-64 w-64 rounded-full bg-violet-500/30 blur-3xl" />
 
-            <label style={styles.label}>Custom Analysis Prompt (optional)</label>
-            <textarea
-              value={customPrompt}
-              onChange={(e) => setCustomPrompt(e.target.value)}
-              placeholder="e.g., Focus on hook, pacing, trending sounds, hashtag fit"
-              style={{ ...styles.input, minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }}
-            />
-
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-              <button type="submit" disabled={loading} style={styles.primaryBtn}>
-                {loading ? 'Analyzing…' : 'Analyze Video'}
-              </button>
-              <button type="button" onClick={() => { setVideoUrl(''); setCustomPrompt('') }} style={styles.ghostBtn}>Clear</button>
+          <div className="mb-6 flex items-center gap-3">
+            <div className="rounded-xl bg-violet-500/20 p-2 ring-1 ring-inset ring-violet-300/30">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path d="M12 3v18M3 12h18" stroke="currentColor" className="text-violet-300" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
             </div>
-          </form>
-
-          {(statusMessage || isPolling) && (
-            <div style={styles.statusBox}>
-              <span style={{ color: '#E5E7EB' }}><strong>Status:</strong> {statusMessage}</span>
-              {(loading || isPolling) && <span style={{ color: '#9CA3AF' }}>Processing…</span>}
+            <div>
+              <h1 className="text-xl font-semibold tracking-tight">Sign in to Zlyzer</h1>
+              <p className="text-sm text-slate-300">One click to your analytics workspace</p>
             </div>
-          )}
-        </section>
-
-        {/* Stats & Quotas */}
-        <section style={{ display: 'grid', gap: 14 }}>
-          <div style={styles.card}>
-            <div style={styles.cardHeader}>
-              <h2 style={styles.cardTitle}>Usage Overview</h2>
-              {!dashboardLoading && !dashboardError && dashboardData && (
-                <Badge color="#22c55e">Live</Badge>
-              )}
-            </div>
-            {dashboardLoading ? (
-              <p style={{ color: '#9CA3AF' }}>Loading…</p>
-            ) : dashboardError ? (
-              <p style={{ color: '#9CA3AF', fontStyle: 'italic' }}>Usage statistics temporarily unavailable</p>
-            ) : dashboardData ? (
-              <div style={{ display: 'grid', gap: 16 }}>
-                <div style={styles.statGrid}>
-                  <StatCard label="Total Requests" value={dashboardData.numReqs} />
-                  <StatCard label="Free Quota Remaining" value={dashboardData.videoAnalysisFreeQuota} />
-                  <StatCard label="Paid Quota Remaining" value={dashboardData.videoAnalysisPaidQuota} />
-                </div>
-                <div style={{ display: 'grid', gap: 10 }}>
-                  <Progress value={dashboardData.videoAnalysisFreeQuota} max={100} label="Free quota" />
-                  <Progress value={dashboardData.videoAnalysisPaidQuota} max={1000} label="Paid quota" />
-                </div>
-              </div>
-            ) : (
-              <p style={{ color: '#9CA3AF', fontStyle: 'italic' }}>No data available</p>
-            )}
           </div>
 
-          {/* Recent Requests */}
-          <div style={styles.card}>
-            <div style={styles.cardHeader}>
-              <h2 style={styles.cardTitle}>Recent Analysis Requests</h2>
-            </div>
-            {!dashboardData || dashboardData.reqs.length === 0 ? (
-              <p style={{ color: '#9CA3AF' }}>No recent requests yet.</p>
-            ) : (
-              <div style={{ display: 'grid', gap: 10, maxHeight: 360, overflowY: 'auto' }}>
-                {dashboardData.reqs.map((req) => (
-                  <div key={req.id} style={styles.reqRow}>
-                    <div style={{ display: 'grid', gap: 6 }}>
-                      <div style={{ fontSize: 14, color: '#E5E7EB', wordBreak: 'break-all' }}>
-                        <strong>URL:</strong> {req.url}
-                      </div>
-                      <div style={{ fontSize: 12, color: '#9CA3AF' }}>
-                        <strong>Status:</strong> {req.status} • <strong>Processing:</strong> {req.processingTimeMs}ms
-                      </div>
-                      {req.createdAt && (
-                        <div style={{ fontSize: 12, color: '#9CA3AF' }}>
-                          <strong>Created:</strong> {new Date(req.createdAt).toLocaleString()}
-                        </div>
-                      )}
-                      {req.errorMessage && (
-                        <div style={{ fontSize: 12, color: '#fca5a5' }}>
-                          <strong>Error:</strong> {req.errorMessage}
-                        </div>
-                      )}
-                    </div>
-                    <span style={{ ...styles.statusPill, ...(req.status === 'COMPLETED' ? styles.ok : req.status === 'FAILED' ? styles.err : styles.warn) }}>
-                      {req.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
+          <button
+            onClick={signInWithGoogle}
+            className="group inline-flex w-full items-center justify-center gap-3 rounded-xl border border-white/15 bg-white text-slate-900 px-5 py-3 font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 active:scale-[.99] hover:shadow-lg"
+            aria-label="Continue with Google"
+          >
+            <GoogleIcon className="h-5 w-5" />
+            Continue with Google
+            <span aria-hidden className="ml-auto opacity-0 transition group-hover:opacity-100">→</span>
+          </button>
 
-        {/* Analysis Result */}
-        {currentAnalysis && (
-          <section style={styles.card}>
-            <div style={styles.cardHeader}>
-              <h2 style={styles.cardTitle}>Analysis Results</h2>
-              <button
-                onClick={() => currentAnalysis && navigator.clipboard.writeText(currentAnalysis)}
-                style={styles.ghostBtnSmall}
-                title="Copy analysis to clipboard"
-              >📋 Copy</button>
-            </div>
-            <div style={styles.resultBox}>
-              <div dangerouslySetInnerHTML={{ __html: formatAnalysisToHtml(currentAnalysis) }} />
-            </div>
-          </section>
-        )}
+          {/* Divider */}
+          <div className="my-6 flex items-center gap-3 text-xs text-slate-400">
+            <div className="h-px flex-1 bg-white/10" /><span>or</span><div className="h-px flex-1 bg-white/10" />
+          </div>
+
+          {/* Future expansion (email/password). Keep it disabled visually to emphasize google for now) */}
+          <fieldset disabled className="grid gap-3 opacity-60">
+            <label className="grid gap-1">
+              <span className="text-xs text-slate-300">Email</span>
+              <input type="email" placeholder="name@company.com" className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm placeholder-slate-400 outline-none focus:ring-2 focus:ring-violet-400" />
+            </label>
+            <label className="grid gap-1">
+              <span className="text-xs text-slate-300">Password</span>
+              <input type="password" placeholder="••••••••" className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm placeholder-slate-400 outline-none focus:ring-2 focus:ring-violet-400" />
+            </label>
+            <button className="rounded-lg bg-violet-500/80 px-4 py-2 text-sm font-medium text-white/90">Continue</button>
+          </fieldset>
+
+          {/* Footnote */}
+          <p id="privacy" className="mt-6 text-[11px] leading-5 text-slate-400">
+            By continuing, you agree to our <a className="underline decoration-white/20 underline-offset-2 hover:text-violet-300" href="#terms">Terms</a> and <a className="underline decoration-white/20 underline-offset-2 hover:text-violet-300" href="#privacy">Privacy Policy</a>.
+          </p>
+        </div>
+
+        {/* Subtle bottom notes */}
+        <div className="mt-10 text-center text-xs text-slate-400">
+          <p>© {new Date().getFullYear()} Zlyzer. All rights reserved.</p>
+        </div>
       </main>
-
-      <footer style={styles.footer}>© {new Date().getFullYear()} Zlyzer</footer>
     </div>
   )
 }
 
-export default Dashboard
+function Logo() {
+  return (
+    <div className="flex items-center gap-2">
+      <div aria-hidden className="grid h-6 w-6 place-items-center rounded-md bg-gradient-to-br from-violet-500 to-indigo-500 shadow-lg">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+          <path d="M4 12h10l-4 6h10" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+    </div>
+  )
+}
 
-// ----------------- Styles -----------------
-const styles: Record<string, React.CSSProperties> = {
-  appShell: {
-    minHeight: '100vh',
-    background: 'radial-gradient(1200px 800px at 80% 10%, rgba(139,92,246,0.12), transparent 60%), #0A0A1F',
-    color: '#fff',
-    fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial',
-    padding: 24
-  },
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '12px 16px',
-    border: '1px solid rgba(255,255,255,0.08)',
-    borderRadius: 16,
-    background: 'rgba(255,255,255,0.04)',
-    backdropFilter: 'blur(10px)',
-    marginBottom: 16
-  },
-  brandRow: { display: 'flex', alignItems: 'center', gap: 10 },
-  logoDot: { width: 10, height: 10, borderRadius: 999, background: 'linear-gradient(135deg,#8B5CF6,#C084FC)', boxShadow: '0 0 16px rgba(192,132,252,0.7)' },
-  brandText: { letterSpacing: '0.12em', fontSize: 12, color: '#C4B5FD' },
-  main: {
-    display: 'grid',
-    gap: 16,
-    gridTemplateColumns: '1.2fr 1fr',
-  },
-  card: {
-    background: 'rgba(255,255,255,0.04)',
-    border: '1px solid rgba(255,255,255,0.08)',
-    borderRadius: 20,
-    padding: 20,
-    backdropFilter: 'blur(10px)'
-  },
-  cardHeader: {
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12
-  },
-  cardTitle: { margin: 0, fontSize: 18, fontWeight: 700, color: '#E5E7EB' },
-  label: { fontSize: 12, color: '#9CA3AF' },
-  input: {
-    width: '100%',
-    padding: '12px 14px',
-    borderRadius: 12,
-    border: '1px solid rgba(255,255,255,0.12)',
-    background: 'rgba(255,255,255,0.06)',
-    color: '#fff',
-    outline: 'none'
-  },
-  primaryBtn: {
-    appearance: 'none',
-    border: '1px solid rgba(255,255,255,0.12)',
-    background: 'linear-gradient(135deg,#8B5CF6,#06b6d4)',
-    color: '#fff',
-    padding: '12px 16px',
-    fontWeight: 700,
-    borderRadius: 12,
-    cursor: 'pointer',
-  },
-  ghostBtn: {
-    appearance: 'none',
-    border: '1px solid rgba(255,255,255,0.12)',
-    background: 'transparent',
-    color: '#e5e7eb',
-    padding: '10px 14px',
-    fontWeight: 600,
-    borderRadius: 12,
-    cursor: 'pointer',
-  },
-  ghostBtnSmall: {
-    appearance: 'none',
-    border: '1px solid rgba(255,255,255,0.12)',
-    background: 'transparent',
-    color: '#e5e7eb',
-    padding: '6px 10px',
-    fontWeight: 600,
-    borderRadius: 10,
-    cursor: 'pointer',
-    fontSize: 12
-  },
-  statusBox: {
-    marginTop: 14,
-    padding: 12,
-    borderRadius: 12,
-    background: 'rgba(255,255,255,0.04)',
-    border: '1px solid rgba(255,255,255,0.08)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between'
-  },
-  statGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0,1fr))',
-    gap: 12
-  },
-  statCard: {
-    border: '1px solid rgba(255,255,255,0.08)',
-    background: 'rgba(255,255,255,0.03)',
-    padding: 16,
-    borderRadius: 14
-  },
-  reqRow: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 12,
-    border: '1px solid rgba(255,255,255,0.08)',
-    background: 'rgba(255,255,255,0.03)',
-    padding: 12,
-    borderRadius: 12
-  },
-  statusPill: {
-    padding: '6px 10px',
-    borderRadius: 999,
-    fontSize: 12,
-    fontWeight: 700,
-    alignSelf: 'flex-start'
-  },
-  ok: { background: 'rgba(34,197,94,0.15)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.35)' },
-  err: { background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.35)' },
-  warn: { background: 'rgba(234,179,8,0.15)', color: '#eab308', border: '1px solid rgba(234,179,8,0.35)' },
-  resultBox: {
-    border: '1px solid rgba(255,255,255,0.08)',
-    background: 'rgba(255,255,255,0.02)',
-    borderRadius: 14,
-    padding: 20,
-    maxHeight: 520,
-    overflowY: 'auto'
-  },
-  footer: {
-    marginTop: 16,
-    color: '#9CA3AF',
-    fontSize: 12,
-    textAlign: 'center'
-  }
+function GoogleIcon(props) {
+  return (
+    <svg viewBox="0 0 533.5 544.3" aria-hidden {...props}>
+      <path d="M533.5 278.4c0-18.5-1.7-37-5.2-54.8H272.1v103.8h146.9c-6.3 34.8-25.4 64.3-54.3 84.1v69.7h87.7c51.4-47.3 81.1-117.1 81.1-202.8z" fill="#4285F4"/>
+      <path d="M272.1 544.3c73.3 0 134.9-24.2 179.8-65.8l-87.7-69.7c-24.4 16.4-55.7 26.1-92 26.1-70.7 0-130.6-47.6-152-111.6H29.8v70.2c44.3 87.9 135.8 150.8 242.3 150.8z" fill="#34A853"/>
+      <path d="M120.1 323.3c-10.7-31.9-10.7-66.5 0-98.4V154.6H29.8c-42.4 84.9-42.4 185.9 0 270.8l90.3-70.2z" fill="#FBBC05"/>
+      <path d="M272.1 107.7c39.9-.6 78.3 14.9 107.5 43.6l80.1-80.1C406.5 24.1 342.6-.5 272.1 0 165.6 0 74.1 62.9 29.8 150.8l90.3 70.2c21.3-64 81.3-113.3 152-113.3z" fill="#EA4335"/>
+    </svg>
+  )
 }
